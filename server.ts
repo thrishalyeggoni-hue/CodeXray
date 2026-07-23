@@ -158,8 +158,8 @@ Provide:
   }
 });
 
-// 2. Flowchart API (Mermaid.js syntax)
-app.post("/api/flowchart", async (req, res) => {
+// 3. Dry Run Simulation Trace API
+app.post("/api/dryrun", async (req, res) => {
   const { code, language } = req.body || {};
   if (!code) {
     return res.status(400).json({ error: "Code snippet is required." });
@@ -167,38 +167,53 @@ app.post("/api/flowchart", async (req, res) => {
 
   const ai = getGenAI();
   if (!ai) {
-    return res.json(generateFallbackFlowchart(code));
+    return res.json(generateFallbackDryRun(code));
   }
 
-  const prompt = `Convert the following ${language || "code"} snippet into a clean, valid Mermaid.js flowchart (graph TD).
+  const prompt = `Perform an accurate step-by-step dry run simulation of executing this ${language || "code"} snippet.
+Trace up to 10 key execution steps sequentially from initialization to return/exit.
+For each step, track the current line number executed, line code content, what evaluated, the EXACT local variables in memory at that step, and any console stdout printed on that specific line.
 
 Code:
 \`\`\`
 ${code}
 \`\`\`
 
-Return a JSON object containing:
-- mermaidCode: Valid Mermaid.js diagram starting with "graph TD".
-  CRITICAL SYNTAX RULES:
-  1. ALWAYS enclose node label text in double quotes inside shapes!
-     Examples:
-     Start(["Start Execution"]) --> Check{"Is arr[i] == target?"}
-  2. For edge decision labels, ALWAYS use pipe syntax (e.g. -->|Yes| or -->|No|):
-     Check -->|Yes| Action["return index i"]
-     Check -->|No| Next["i = i + 1"]
-  3. Do NOT use unquoted special characters like <, >, ==, [, ], (, ), ||, && inside labels or edge texts.
-  4. Keep the graph clean and concise with at most 8-10 nodes.
-- explanation: A short 2-sentence description of the workflow.`;
+Return JSON:
+- totalSteps: total number of execution steps
+- finalOutput: overall final return value or output yielded at program completion (e.g., "Returned index 3" or "3")
+- steps: array of objects:
+  - stepNumber: integer starting at 1
+  - lineNumber: 1-based line number of executed code
+  - lineContent: exact source code line
+  - explanation: step explanation describing memory changes or condition evaluations
+  - variables: object map of active variables in scope with their exact values at this step (e.g. {"low": 0, "high": 6, "mid": 3, "arr[mid]": 7})
+  - consoleOutput: string ONLY if this specific step printed to stdout; otherwise omit or leave empty. DO NOT place final completion output on early steps!`;
 
   const config = {
     responseMimeType: "application/json",
     responseSchema: {
       type: Type.OBJECT,
       properties: {
-        mermaidCode: { type: Type.STRING },
-        explanation: { type: Type.STRING },
+        totalSteps: { type: Type.INTEGER },
+        finalOutput: { type: Type.STRING },
+        steps: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              stepNumber: { type: Type.INTEGER },
+              lineNumber: { type: Type.INTEGER },
+              lineContent: { type: Type.STRING },
+              explanation: { type: Type.STRING },
+              variables: { type: Type.OBJECT },
+              consoleOutput: { type: Type.STRING },
+            },
+            required: ["stepNumber", "lineNumber", "lineContent", "explanation", "variables"],
+          },
+        },
       },
-      required: ["mermaidCode", "explanation"],
+      required: ["totalSteps", "finalOutput", "steps"],
     },
   };
 
@@ -217,66 +232,6 @@ Return a JSON object containing:
         model: "gemini-flash-latest",
         contents: prompt,
         config,
-      });
-      const parsedFallback = JSON.parse(cleanJsonText(fallbackRes.text || "{}"));
-      return res.json(parsedFallback);
-    } catch (fallbackErr) {
-      console.warn("[Gemini API Quota/Rate Limit] Serving rule-based flowchart generator.");
-      return res.json(generateFallbackFlowchart(code));
-    }
-  }
-});
-
-// 3. Dry Run Simulation Trace API
-app.post("/api/dryrun", async (req, res) => {
-  const { code, language } = req.body || {};
-  if (!code) {
-    return res.status(400).json({ error: "Code snippet is required." });
-  }
-
-  const ai = getGenAI();
-  if (!ai) {
-    return res.json(generateFallbackDryRun(code));
-  }
-
-  const prompt = `Perform a step-by-step dry run simulation of executing this ${language || "code"} snippet.
-Trace up to 10 key execution steps. For each step, track the current line number executed, line code content, what happened, the variable state dictionary at that exact step, and any output printed.
-
-Code:
-\`\`\`
-${code}
-\`\`\`
-
-Return JSON:
-- totalSteps: number of steps in trace
-- finalOutput: overall printed console result or return value
-- steps: array of objects:
-  - stepNumber: number starting at 1
-  - lineNumber: 1-based line number of current statement
-  - lineContent: exact text of statement
-  - explanation: what this step is calculating or evaluating
-  - variables: key-value object of active variables at this moment
-  - consoleOutput: optional console print text generated by this line`;
-
-  try {
-    const response = await ai.models.generateContent({
-      model: "gemini-3.6-flash",
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-      },
-    });
-
-    const parsed = JSON.parse(cleanJsonText(response.text || "{}"));
-    return res.json(parsed);
-  } catch (err) {
-    try {
-      const fallbackRes = await ai.models.generateContent({
-        model: "gemini-flash-latest",
-        contents: prompt,
-        config: {
-          responseMimeType: "application/json",
-        },
       });
       const parsedFallback = JSON.parse(cleanJsonText(fallbackRes.text || "{}"));
       return res.json(parsedFallback);
@@ -519,20 +474,6 @@ function generateFallbackAnalysis(code: string, language: string) {
       "Missing base cases or exit conditions.",
     ],
     keyConcepts: ["Loop Control", "Conditional Logic", "Data Manipulation", "Algorithmic Complexity"],
-  };
-}
-
-function generateFallbackFlowchart(code: string) {
-  return {
-    mermaidCode: `graph TD
-  Start(["Start Execution"]) --> CheckInput{"Validate Input"}
-  CheckInput -->|Valid| Loop["Process Code Logic"]
-  CheckInput -->|Invalid| ReturnErr["Return Error"]
-  Loop --> CheckCond{"Condition Met?"}
-  CheckCond -->|Yes| ExecuteStep["Execute Action"]
-  ExecuteStep --> Loop
-  CheckCond -->|No| EndVal(["Return Result"])`,
-    explanation: "Standard control flow representing initialization, conditional checking, and loop processing.",
   };
 }
 

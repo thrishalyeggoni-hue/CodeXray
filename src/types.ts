@@ -50,11 +50,6 @@ export interface DryRunResponse {
   finalOutput: string;
 }
 
-export interface FlowchartResponse {
-  mermaidCode: string;
-  explanation: string;
-}
-
 export interface QuizQuestion {
   id: number;
   question: string;

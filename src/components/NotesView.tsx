@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { NotesResponse } from '../types';
+import { NotesResponse, DryRunResponse, ProgrammingLanguage } from '../types';
 import {
   BookOpen,
   Copy,
@@ -12,82 +12,118 @@ import {
   Download,
   Eye,
   X,
+  MonitorPlay,
 } from 'lucide-react';
 
 interface NotesViewProps {
   notesData: NotesResponse | null;
+  dryRunData?: DryRunResponse | null;
+  code?: string;
+  language?: ProgrammingLanguage;
   theme?: 'dark' | 'light';
 }
 
-export const NotesView: React.FC<NotesViewProps> = ({ notesData, theme = 'dark' }) => {
+export const NotesView: React.FC<NotesViewProps> = ({
+  notesData,
+  dryRunData,
+  code,
+  language,
+  theme = 'dark',
+}) => {
   const isLight = theme === 'light';
   const [copied, setCopied] = useState(false);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
 
   if (!notesData) {
     return (
-      <div className={`p-8 text-center rounded-xl border text-xs ${
-        isLight ? 'bg-slate-50 border-slate-200 text-slate-500' : 'bg-[#0e0e10] border-white/5 text-slate-500'
+      <div className={`p-8 text-center rounded-2xl border text-xs backdrop-blur-md ${
+        isLight ? 'bg-slate-50/80 border-slate-200 text-slate-500' : 'bg-[#0e0e10]/80 border-white/10 text-slate-500'
       }`}>
-        No study notes generated yet. Click "Analyze Code" to prepare exam revision notes.
+        No study notes generated yet. Click "Analyze Code" to prepare exam revision notes with Python Tutor trace steps.
       </div>
     );
   }
+
+  const pythonTutorLangMap: Record<string, string> = {
+    python: '3',
+    java: 'java',
+    c: 'c',
+    cpp: 'cpp',
+    javascript: 'js',
+    typescript: 'ts',
+  };
+  const ptLang = pythonTutorLangMap[language || 'java'] || 'java';
+  const directTutorUrl = code
+    ? `https://pythontutor.com/render.html#code=${encodeURIComponent(
+        code
+      )}&cumulative=false&py=${ptLang}&rawInputLstJSON=%5B%5D`
+    : null;
+
+  const escapeHtml = (str: string) =>
+    String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
 
   const getPrintableHTML = () => {
     return `<!DOCTYPE html>
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>${notesData.title || 'CodeXray AI - Exam Revision Notes'}</title>
+    <title>${escapeHtml(notesData.title || 'CodeXray AI - Exam Revision Notes')}</title>
     <style>
-      @page { size: A4; margin: 15mm; }
+      @page { size: A4; margin: 12mm; }
       body {
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         color: #0f172a;
         background: #ffffff;
-        padding: 24px;
-        line-height: 1.6;
-        font-size: 13px;
-        max-width: 800px;
+        padding: 20px;
+        line-height: 1.5;
+        font-size: 12px;
+        max-width: 850px;
         margin: 0 auto;
       }
       .header {
-        border-bottom: 2px solid #3b82f6;
-        padding-bottom: 12px;
-        margin-bottom: 20px;
+        border-bottom: 2px solid #4f46e5;
+        padding-bottom: 10px;
+        margin-bottom: 16px;
       }
-      h1 { font-size: 22px; margin: 0 0 6px 0; color: #1e293b; }
+      h1 { font-size: 20px; margin: 0 0 4px 0; color: #1e1b4b; font-weight: 800; }
       .badge {
         display: inline-block;
         padding: 3px 8px;
         background: #e0e7ff;
         color: #3730a3;
-        font-size: 11px;
-        font-weight: 600;
-        border-radius: 4px;
+        font-size: 10px;
+        font-weight: 700;
+        border-radius: 9999px;
         text-transform: uppercase;
+        letter-spacing: 0.5px;
       }
       h2 {
-        font-size: 14px;
-        color: #2563eb;
-        margin-top: 20px;
+        font-size: 13px;
+        color: #4338ca;
+        margin-top: 18px;
         margin-bottom: 8px;
         text-transform: uppercase;
         letter-spacing: 0.5px;
+        font-weight: 800;
+        border-bottom: 1px solid #e0e7ff;
+        padding-bottom: 4px;
       }
       .box {
         background: #f8fafc;
         border: 1px solid #e2e8f0;
         border-radius: 8px;
-        padding: 12px 16px;
-        margin-bottom: 12px;
+        padding: 10px 14px;
+        margin-bottom: 10px;
       }
       .grid {
         display: grid;
         grid-template-columns: repeat(4, 1fr);
-        gap: 10px;
-        margin-bottom: 16px;
+        gap: 8px;
+        margin-bottom: 12px;
       }
       .grid-box {
         background: #f1f5f9;
@@ -96,37 +132,74 @@ export const NotesView: React.FC<NotesViewProps> = ({ notesData, theme = 'dark' 
         border-radius: 6px;
         text-align: center;
       }
-      .grid-label { font-size: 10px; color: #64748b; font-weight: 600; text-transform: uppercase; }
-      .grid-val { font-size: 12px; font-weight: 700; color: #0284c7; font-family: monospace; }
-      .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-      ul { margin: 0; padding-left: 20px; }
-      li { margin-bottom: 4px; }
+      .grid-label { font-size: 9px; color: #64748b; font-weight: 700; text-transform: uppercase; }
+      .grid-val { font-size: 11px; font-weight: 700; color: #0284c7; font-family: monospace; }
+      .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+      ul { margin: 0; padding-left: 18px; }
+      li { margin-bottom: 3px; }
       .cheat-sheet {
         background: #eff6ff;
         border: 1px solid #bfdbfe;
         border-radius: 8px;
-        padding: 14px;
+        padding: 12px;
         color: #1e40af;
       }
+      .trace-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 12px;
+        font-size: 11px;
+      }
+      .trace-table th {
+        background: #e0e7ff;
+        color: #312e81;
+        text-align: left;
+        padding: 6px 8px;
+        font-size: 10px;
+        text-transform: uppercase;
+        font-weight: 700;
+        border-bottom: 2px solid #c7d2fe;
+      }
+      .trace-table td {
+        padding: 6px 8px;
+        border-bottom: 1px solid #e2e8f0;
+        vertical-align: top;
+      }
+      .code-tag {
+        font-family: monospace;
+        background: #f1f5f9;
+        padding: 2px 5px;
+        border-radius: 4px;
+        font-size: 10.5px;
+        color: #312e81;
+        font-weight: 600;
+      }
+      .var-tag {
+        font-family: monospace;
+        color: #047857;
+        font-weight: 700;
+        font-size: 10.5px;
+      }
       .no-print-toolbar {
-        margin-bottom: 24px;
-        padding: 12px 16px;
-        background: #1e293b;
+        margin-bottom: 20px;
+        padding: 10px 16px;
+        background: #1e1b4b;
         color: #fff;
-        border-radius: 8px;
+        border-radius: 9999px;
         display: flex;
         align-items: center;
         justify-content: space-between;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
       }
       .btn {
-        padding: 8px 16px;
-        background: #2563eb;
+        padding: 6px 16px;
+        background: #4f46e5;
         color: #fff;
         border: none;
-        border-radius: 6px;
-        font-weight: 600;
+        border-radius: 9999px;
+        font-weight: 700;
         cursor: pointer;
-        font-size: 12px;
+        font-size: 11px;
       }
       @media print {
         .no-print-toolbar { display: none !important; }
@@ -136,73 +209,163 @@ export const NotesView: React.FC<NotesViewProps> = ({ notesData, theme = 'dark' 
   </head>
   <body>
     <div class="no-print-toolbar">
-      <span>CodeXray AI - Printable Exam Sheet</span>
+      <span style="font-weight: 700; font-size: 12px;">CodeXray AI - Printable Exam Sheet & Python Tutor Trace</span>
       <button class="btn" onclick="window.print()">Print / Save as PDF</button>
     </div>
 
     <div class="header">
-      <span class="badge">Exam & Interview Revision Notes</span>
-      <h1>${notesData.title || 'Algorithmic Revision Notes'}</h1>
+      <span class="badge">Exam & Interview Revision Cheat Sheet</span>
+      <h1>${escapeHtml(notesData.title || 'Algorithmic Revision Notes')}</h1>
     </div>
 
     <h2>1. Overview & Core Definition</h2>
-    <div class="box">${notesData.summary}</div>
+    <div class="box">${escapeHtml(notesData.summary)}</div>
 
-    <h2>2. Step-by-Step Logic</h2>
-    ${notesData.algorithmSteps.map((step) => `<div class="box font-mono" style="font-family: monospace; font-size: 12px;">${step}</div>`).join('')}
+    <h2>2. Python Tutor Step-by-Step Memory & Variable Trace</h2>
+    ${
+      dryRunData && dryRunData.steps && dryRunData.steps.length > 0
+        ? `
+      <table class="trace-table">
+        <thead>
+          <tr>
+            <th style="width: 45px; text-align: center;">Step</th>
+            <th style="width: 50px; text-align: center;">Line</th>
+            <th>Executed Code</th>
+            <th>Variable Memory State</th>
+            <th>Trace Explanation</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${dryRunData.steps
+            .map(
+              (step) => `
+            <tr style="background:${step.stepNumber % 2 === 0 ? '#f8fafc' : '#ffffff'};">
+              <td style="text-align: center; font-weight: 800; color: #4f46e5;">#${step.stepNumber}</td>
+              <td style="text-align: center; font-family: monospace; color: #64748b;">Line ${step.lineNumber}</td>
+              <td><span class="code-tag">${escapeHtml(step.lineContent || '')}</span></td>
+              <td>
+                ${
+                  step.variables && Object.keys(step.variables).length > 0
+                    ? `<span class="var-tag">${Object.entries(step.variables)
+                        .map(([k, v]) => `${escapeHtml(k)} = ${escapeHtml(JSON.stringify(v))}`)
+                        .join(', ')}</span>`
+                    : '<span style="color:#94a3b8; font-style:italic;">No variable changes</span>'
+                }
+              </td>
+              <td style="color:#334155;">${escapeHtml(step.explanation || '')}</td>
+            </tr>
+          `
+            )
+            .join('')}
+        </tbody>
+      </table>
+      ${
+        dryRunData.finalOutput
+          ? `<div class="box" style="background:#f0fdf4; border-color:#bbf7d0; color:#166534; font-family:monospace; font-size:11px;"><strong>Final Output Yield:</strong> ${escapeHtml(
+              dryRunData.finalOutput
+            )}</div>`
+          : ''
+      }
+    `
+        : `
+      <div class="box" style="color:#64748b; font-style:italic;">
+        General execution flow steps:
+        <ul style="margin-top:6px;">
+          ${notesData.algorithmSteps.map((s) => `<li>${escapeHtml(s)}</li>`).join('')}
+        </ul>
+      </div>
+    `
+    }
 
-    <h2>3. Complexity Bounds</h2>
+    <h2>3. Algorithm Execution Logic</h2>
+    <div class="space-y-1">
+      ${notesData.algorithmSteps
+        .map(
+          (step) =>
+            `<div class="box" style="font-family: monospace; font-size: 11px;">${escapeHtml(
+              step
+            )}</div>`
+        )
+        .join('')}
+    </div>
+
+    <h2>4. Complexity Bounds</h2>
     <div class="grid">
       <div class="grid-box">
         <div class="grid-label">Best</div>
-        <div class="grid-val" style="color: #059669;">${notesData.complexitySummary.best}</div>
+        <div class="grid-val" style="color: #059669;">${escapeHtml(notesData.complexitySummary.best)}</div>
       </div>
       <div class="grid-box">
         <div class="grid-label">Average</div>
-        <div class="grid-val" style="color: #2563eb;">${notesData.complexitySummary.average}</div>
+        <div class="grid-val" style="color: #2563eb;">${escapeHtml(notesData.complexitySummary.average)}</div>
       </div>
       <div class="grid-box">
         <div class="grid-label">Worst</div>
-        <div class="grid-val" style="color: #d97706;">${notesData.complexitySummary.worst}</div>
+        <div class="grid-val" style="color: #d97706;">${escapeHtml(notesData.complexitySummary.worst)}</div>
       </div>
       <div class="grid-box">
         <div class="grid-label">Space Aux</div>
-        <div class="grid-val" style="color: #7c3aed;">${notesData.complexitySummary.space}</div>
+        <div class="grid-val" style="color: #7c3aed;">${escapeHtml(notesData.complexitySummary.space)}</div>
       </div>
     </div>
 
-    <h2>4. Pros & Trade-offs</h2>
+    <h2>5. Pros & Trade-offs</h2>
     <div class="two-col">
       <div class="box">
         <strong style="color: #059669;">Pros & Advantages:</strong>
-        <ul style="margin-top: 6px;">${notesData.prosAndCons.pros.map((p) => `<li>${p}</li>`).join('')}</ul>
+        <ul style="margin-top: 6px;">${notesData.prosAndCons.pros
+          .map((p) => `<li>${escapeHtml(p)}</li>`)
+          .join('')}</ul>
       </div>
       <div class="box">
         <strong style="color: #dc2626;">Trade-offs & Cons:</strong>
-        <ul style="margin-top: 6px;">${notesData.prosAndCons.cons.map((c) => `<li>${c}</li>`).join('')}</ul>
+        <ul style="margin-top: 6px;">${notesData.prosAndCons.cons
+          .map((c) => `<li>${escapeHtml(c)}</li>`)
+          .join('')}</ul>
       </div>
     </div>
 
-    <h2>5. Real-World Applications</h2>
+    <h2>6. Real-World Applications</h2>
     <div class="box">
-      ${notesData.realWorldApplications.map((app) => `<span style="display:inline-block; margin:2px 4px; padding:2px 8px; background:#e2e8f0; border-radius:4px; font-size:11px;">${app}</span>`).join('')}
+      ${notesData.realWorldApplications
+        .map(
+          (app) =>
+            `<span style="display:inline-block; margin:2px 4px; padding:2px 8px; background:#e2e8f0; border-radius:4px; font-size:10px; font-weight:600;">${escapeHtml(
+              app
+            )}</span>`
+        )
+        .join('')}
     </div>
 
-    <h2>6. High-Yield Exam Takeaways</h2>
+    <h2>7. High-Yield Exam Takeaways</h2>
     <div class="cheat-sheet">
       <strong>⚡ Revision Takeaway:</strong>
-      <p style="margin: 4px 0 0 0;">${notesData.cheatSheetSummary}</p>
+      <p style="margin: 4px 0 0 0;">${escapeHtml(notesData.cheatSheetSummary)}</p>
     </div>
   </body>
 </html>`;
   };
 
   const handleCopyMarkdown = () => {
+    let traceMd = '';
+    if (dryRunData?.steps && dryRunData.steps.length > 0) {
+      traceMd = `\n## Python Tutor Step-by-Step Memory Trace\n` +
+        dryRunData.steps
+          .map(
+            (s) =>
+              `- Step ${s.stepNumber} (Line ${s.lineNumber}): \`${s.lineContent}\` | Vars: ${
+                s.variables ? JSON.stringify(s.variables) : 'None'
+              } | ${s.explanation}`
+          )
+          .join('\n') +
+        `\n`;
+    }
+
     const text = `# ${notesData.title}
 
 ## Summary
 ${notesData.summary}
-
+${traceMd}
 ## Algorithm Logic
 ${notesData.algorithmSteps.map((s) => `- ${s}`).join('\n')}
 
@@ -240,22 +403,6 @@ ${notesData.cheatSheetSummary}
     }
   };
 
-  const handleOpenBlobTab = () => {
-    try {
-      const htmlContent = getPrintableHTML();
-      const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const win = window.open(url, '_blank');
-      if (!win) {
-        // Popups blocked, download html file instead
-        handleDownloadHtml();
-      }
-    } catch (e) {
-      console.error('Failed to open print tab:', e);
-      handleDownloadHtml();
-    }
-  };
-
   const handleDownloadHtml = () => {
     const htmlContent = getPrintableHTML();
     const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
@@ -272,8 +419,8 @@ ${notesData.cheatSheetSummary}
   return (
     <div className="space-y-6">
       {/* Header Bar */}
-      <div className={`p-4 rounded-xl border shadow-sm flex flex-wrap items-center justify-between gap-4 ${
-        isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-[#0e0e10] border-white/5 text-slate-200'
+      <div className={`p-4 rounded-2xl border backdrop-blur-md shadow-md flex flex-wrap items-center justify-between gap-4 ${
+        isLight ? 'bg-white/80 border-slate-200/80 text-slate-800' : 'bg-[#0e0e10]/80 border-white/10 text-slate-200'
       }`}>
         <div>
           <div className="flex items-center space-x-2 text-indigo-600 dark:text-indigo-400 text-xs font-semibold uppercase tracking-wider">
@@ -289,10 +436,10 @@ ${notesData.cheatSheetSummary}
           {/* Copy Markdown */}
           <button
             onClick={handleCopyMarkdown}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border ${
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all border backdrop-blur-md shadow-sm ${
               isLight
-                ? 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300'
-                : 'bg-white/5 hover:bg-white/10 text-slate-200 border-transparent'
+                ? 'bg-white/80 border-slate-300 text-slate-800 hover:bg-slate-100'
+                : 'bg-white/5 border-white/10 text-slate-200 hover:bg-white/10'
             }`}
             title="Copy Markdown representation"
           >
@@ -307,10 +454,10 @@ ${notesData.cheatSheetSummary}
           {/* Print Preview Modal Toggle */}
           <button
             onClick={() => setShowPreviewModal(true)}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border ${
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all border backdrop-blur-md shadow-sm ${
               isLight
-                ? 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300'
-                : 'bg-white/5 hover:bg-white/10 text-slate-200 border-transparent'
+                ? 'bg-white/80 border-slate-300 text-slate-800 hover:bg-slate-100'
+                : 'bg-white/5 border-white/10 text-slate-200 hover:bg-white/10'
             }`}
             title="Open Clean Light Mode Print Sheet"
           >
@@ -321,10 +468,10 @@ ${notesData.cheatSheetSummary}
           {/* Download HTML */}
           <button
             onClick={handleDownloadHtml}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border ${
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all border backdrop-blur-md shadow-sm ${
               isLight
-                ? 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300'
-                : 'bg-white/5 hover:bg-white/10 text-slate-200 border-transparent'
+                ? 'bg-white/80 border-slate-300 text-slate-800 hover:bg-slate-100'
+                : 'bg-white/5 border-white/10 text-slate-200 hover:bg-white/10'
             }`}
             title="Download printable HTML file for offline saving/printing"
           >
@@ -335,7 +482,7 @@ ${notesData.cheatSheetSummary}
           {/* Primary Print Button */}
           <button
             onClick={handlePrint}
-            className="flex items-center space-x-1.5 px-3.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md transition-all"
+            className="flex items-center space-x-1.5 px-4 py-1.5 rounded-full bg-indigo-600/90 hover:bg-indigo-500 text-white text-xs font-bold shadow-lg shadow-indigo-500/25 border border-indigo-400/30 backdrop-blur-md transition-all"
             title="Print or Save as PDF"
           >
             <Printer className="w-3.5 h-3.5" />
@@ -345,10 +492,10 @@ ${notesData.cheatSheetSummary}
       </div>
 
       {/* Main Printable Notes Container */}
-      <div className={`printable-notes p-6 rounded-xl border space-y-6 ${
+      <div className={`printable-notes p-6 rounded-2xl border space-y-6 shadow-md backdrop-blur-md ${
         isLight
-          ? 'bg-white border-slate-200 text-slate-800 shadow-sm'
-          : 'bg-[#0e0e10] border-white/5 text-slate-300'
+          ? 'bg-white/80 border-slate-200/80 text-slate-800'
+          : 'bg-[#0e0e10]/80 border-white/10 text-slate-300'
       }`}>
         {/* Definition Summary */}
         <div className="space-y-2">
@@ -365,11 +512,124 @@ ${notesData.cheatSheetSummary}
           </p>
         </div>
 
+        {/* Python Tutor & Execution Trace Steps */}
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h4 className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider flex items-center space-x-2">
+              <MonitorPlay className="w-4 h-4 text-cyan-500 dark:text-cyan-400 animate-pulse" />
+              <span>2. Python Tutor Memory & Execution Trace Steps</span>
+            </h4>
+            {directTutorUrl && (
+              <a
+                href={directTutorUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-[11px] font-semibold border backdrop-blur-md transition-all shadow-sm ${
+                  isLight
+                    ? 'bg-indigo-50 border-indigo-200 text-indigo-900 hover:bg-indigo-100'
+                    : 'bg-cyan-500/10 border-cyan-500/30 text-cyan-300 hover:bg-cyan-500/20'
+                }`}
+              >
+                <ExternalLink className="w-3 h-3" />
+                <span>Open Interactive Python Tutor</span>
+              </a>
+            )}
+          </div>
+
+          {dryRunData && dryRunData.steps && dryRunData.steps.length > 0 ? (
+            <div className="space-y-2">
+              <div className={`overflow-x-auto rounded-xl border shadow-sm ${
+                isLight ? 'border-slate-200 bg-white' : 'border-white/10 bg-black/40'
+              }`}>
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className={`border-b text-[10px] font-bold uppercase tracking-wider ${
+                      isLight ? 'bg-slate-100 text-slate-700 border-slate-200' : 'bg-white/5 text-slate-300 border-white/10'
+                    }`}>
+                      <th className="p-2.5 w-12 text-center">Step</th>
+                      <th className="p-2.5 w-16 text-center">Line</th>
+                      <th className="p-2.5">Executed Code</th>
+                      <th className="p-2.5">Variable Memory State</th>
+                      <th className="p-2.5">Trace Explanation</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200 dark:divide-white/5 font-mono text-[11px]">
+                    {dryRunData.steps.map((step) => (
+                      <tr
+                        key={step.stepNumber}
+                        className={`transition-colors ${
+                          isLight ? 'hover:bg-indigo-50/50' : 'hover:bg-white/5'
+                        }`}
+                      >
+                        <td className="p-2.5 text-center font-bold text-indigo-600 dark:text-cyan-400">
+                          #{step.stepNumber}
+                        </td>
+                        <td className="p-2.5 text-center text-slate-500">
+                          L{step.lineNumber}
+                        </td>
+                        <td className="p-2.5">
+                          <code className={`px-2 py-0.5 rounded text-[11px] font-semibold ${
+                            isLight ? 'bg-slate-100 text-indigo-950 border border-slate-200' : 'bg-white/10 text-cyan-200 border border-white/10'
+                          }`}>
+                            {step.lineContent}
+                          </code>
+                        </td>
+                        <td className="p-2.5 text-emerald-600 dark:text-emerald-400 font-semibold">
+                          {step.variables && Object.keys(step.variables).length > 0 ? (
+                            <div className="flex flex-wrap gap-1">
+                              {Object.entries(step.variables).map(([k, v]) => (
+                                <span
+                                  key={k}
+                                  className={`px-2 py-0.5 rounded-full text-[10px] border font-mono ${
+                                    isLight
+                                      ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
+                                      : 'bg-emerald-950/40 border-emerald-500/30 text-emerald-300'
+                                  }`}
+                                >
+                                  {k} = {JSON.stringify(v)}
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-slate-400 text-[10px] italic">No var changes</span>
+                          )}
+                        </td>
+                        <td className="p-2.5 text-slate-700 dark:text-slate-300 font-sans text-xs leading-normal">
+                          {step.explanation}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {dryRunData.finalOutput && (
+                <div className={`p-3 rounded-xl border text-xs font-mono flex items-center space-x-2.5 ${
+                  isLight
+                    ? 'bg-emerald-50 border-emerald-200 text-emerald-950'
+                    : 'bg-emerald-950/30 border-emerald-500/30 text-emerald-300'
+                }`}>
+                  <span className="font-bold uppercase tracking-wider text-[10px] px-2.5 py-0.5 bg-emerald-600 text-white rounded-full">
+                    Final Output
+                  </span>
+                  <span>{dryRunData.finalOutput}</span>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className={`p-4 rounded-xl border text-xs italic ${
+              isLight ? 'bg-slate-50 border-slate-200 text-slate-500' : 'bg-black/30 border-white/5 text-slate-400'
+            }`}>
+              Python Tutor execution steps are being analyzed or fallback to high-level algorithm logic below.
+            </div>
+          )}
+        </div>
+
         {/* Algorithm Steps */}
         <div className="space-y-2">
           <h4 className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider flex items-center space-x-2">
             <FileText className="w-3.5 h-3.5" />
-            <span>2. Step-by-Step Execution Logic</span>
+            <span>3. Step-by-Step Execution Logic</span>
           </h4>
           <div className="space-y-2 text-xs">
             {notesData.algorithmSteps.map((step, idx) => (
@@ -391,7 +651,7 @@ ${notesData.cheatSheetSummary}
         <div className="space-y-2">
           <h4 className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider flex items-center space-x-2">
             <CheckCircle2 className="w-3.5 h-3.5" />
-            <span>3. Complexity Bounds</span>
+            <span>4. Complexity Bounds</span>
           </h4>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono">
             <div className={`p-3 rounded-xl border text-center ${
@@ -460,7 +720,7 @@ ${notesData.cheatSheetSummary}
         {/* Real World Applications */}
         <div className="space-y-2">
           <h4 className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">
-            4. Real-World Applications & Use Cases
+            5. Real-World Applications & Use Cases
           </h4>
           <div className="flex flex-wrap gap-2 text-xs">
             {notesData.realWorldApplications.map((app, idx) => (
@@ -506,21 +766,21 @@ ${notesData.cheatSheetSummary}
               <div className="flex items-center space-x-2">
                 <button
                   onClick={handlePrint}
-                  className="px-3 py-1.5 rounded bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center space-x-1 transition-colors"
+                  className="px-3.5 py-1.5 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center space-x-1.5 transition-colors shadow-sm"
                 >
                   <Printer className="w-3.5 h-3.5" />
                   <span>Print Document</span>
                 </button>
                 <button
                   onClick={handleDownloadHtml}
-                  className="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center space-x-1 transition-colors"
+                  className="px-3.5 py-1.5 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center space-x-1.5 transition-colors"
                 >
                   <Download className="w-3.5 h-3.5 text-emerald-400" />
                   <span>Save File</span>
                 </button>
                 <button
                   onClick={() => setShowPreviewModal(false)}
-                  className="p-1 rounded text-slate-400 hover:text-white transition-colors"
+                  className="p-1.5 rounded-full text-slate-400 hover:text-white transition-colors hover:bg-white/10"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -530,7 +790,7 @@ ${notesData.cheatSheetSummary}
             {/* Modal Body - Paper Document */}
             <div className="p-8 overflow-y-auto space-y-6 text-xs bg-white text-slate-900 leading-relaxed">
               <div className="border-b-2 border-indigo-600 pb-3">
-                <span className="px-2 py-0.5 bg-indigo-100 text-indigo-800 text-[10px] font-bold rounded uppercase">
+                <span className="px-2.5 py-0.5 bg-indigo-100 text-indigo-800 text-[10px] font-bold rounded-full uppercase">
                   Exam & Interview Revision Notes
                 </span>
                 <h2 className="text-xl font-bold text-slate-900 mt-2">
@@ -547,9 +807,44 @@ ${notesData.cheatSheetSummary}
                 </div>
               </div>
 
+              {/* Python Tutor Trace Table in Modal */}
+              {dryRunData && dryRunData.steps && dryRunData.steps.length > 0 && (
+                <div>
+                  <h3 className="font-bold text-indigo-600 text-xs uppercase mb-1">
+                    2. Python Tutor Memory & Variable Trace
+                  </h3>
+                  <div className="border border-slate-200 rounded-lg overflow-hidden text-[11px]">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-indigo-50 border-b border-indigo-100 text-[10px] font-bold uppercase text-indigo-900">
+                          <th className="p-2 w-10 text-center">Step</th>
+                          <th className="p-2 w-12 text-center">Line</th>
+                          <th className="p-2">Code</th>
+                          <th className="p-2">Variables</th>
+                          <th className="p-2">Explanation</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-200 font-mono">
+                        {dryRunData.steps.map((step) => (
+                          <tr key={step.stepNumber} className="hover:bg-slate-50">
+                            <td className="p-2 text-center font-bold text-indigo-600">#{step.stepNumber}</td>
+                            <td className="p-2 text-center text-slate-500">L{step.lineNumber}</td>
+                            <td className="p-2 font-semibold text-indigo-900">{step.lineContent}</td>
+                            <td className="p-2 text-emerald-700 font-semibold">
+                              {step.variables ? JSON.stringify(step.variables) : 'None'}
+                            </td>
+                            <td className="p-2 text-slate-700 font-sans text-[11px]">{step.explanation}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
               <div>
                 <h3 className="font-bold text-indigo-600 text-xs uppercase mb-1">
-                  2. Step-by-Step Logic
+                  3. Step-by-Step Logic
                 </h3>
                 <div className="space-y-1.5">
                   {notesData.algorithmSteps.map((step, idx) => (
@@ -565,7 +860,7 @@ ${notesData.cheatSheetSummary}
 
               <div>
                 <h3 className="font-bold text-indigo-600 text-xs uppercase mb-1">
-                  3. Complexity Bounds
+                  4. Complexity Bounds
                 </h3>
                 <div className="grid grid-cols-4 gap-2 text-center">
                   <div className="p-2 bg-slate-100 border border-slate-200 rounded">
@@ -625,4 +920,5 @@ ${notesData.cheatSheetSummary}
     </div>
   );
 };
+
 

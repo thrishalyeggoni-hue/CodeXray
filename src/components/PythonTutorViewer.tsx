@@ -104,9 +104,9 @@ export const PythonTutorViewer: React.FC<PythonTutorViewerProps> = ({ code, lang
 
         {/* Toolbar controls */}
         <div className="flex items-center flex-wrap gap-2 text-xs">
-          {/* Runtime Selector */}
-          <div className={`flex items-center space-x-1.5 px-2.5 py-1 rounded border ${
-            isLight ? 'bg-white border-slate-300' : 'bg-black/40 border-white/10'
+          {/* Runtime Selector Widget */}
+          <div className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-full border backdrop-blur-md shadow-sm transition-all ${
+            isLight ? 'bg-white/80 border-slate-300/80' : 'bg-white/5 border-white/10'
           }`}>
             <Code className={`w-3.5 h-3.5 ${isLight ? 'text-slate-500' : 'text-slate-400'}`} />
             <select
@@ -125,15 +125,15 @@ export const PythonTutorViewer: React.FC<PythonTutorViewerProps> = ({ code, lang
             </select>
           </div>
 
-          {/* Mode Switcher */}
-          <div className={`flex items-center p-0.5 rounded border text-[11px] ${
-            isLight ? 'bg-slate-100 border-slate-300' : 'bg-black/40 border-white/10'
+          {/* Mode Switcher Widget */}
+          <div className={`flex items-center p-1 rounded-full border backdrop-blur-md text-[11px] shadow-sm ${
+            isLight ? 'bg-white/60 border-slate-300/80' : 'bg-white/5 border-white/10'
           }`}>
             <button
               onClick={() => setEmbedMode('full')}
-              className={`px-2 py-0.5 rounded transition-colors ${
+              className={`px-3 py-1 rounded-full transition-all ${
                 embedMode === 'full'
-                  ? 'bg-indigo-600 text-white font-medium'
+                  ? 'bg-indigo-600/90 text-white font-semibold shadow-sm'
                   : isLight ? 'text-slate-600 hover:text-slate-900' : 'text-slate-400 hover:text-slate-200'
               }`}
               title="Full Python Tutor UI with code editor and trace view"
@@ -142,9 +142,9 @@ export const PythonTutorViewer: React.FC<PythonTutorViewerProps> = ({ code, lang
             </button>
             <button
               onClick={() => setEmbedMode('embed')}
-              className={`px-2 py-0.5 rounded transition-colors ${
+              className={`px-3 py-1 rounded-full transition-all ${
                 embedMode === 'embed'
-                  ? 'bg-indigo-600 text-white font-medium'
+                  ? 'bg-indigo-600/90 text-white font-semibold shadow-sm'
                   : isLight ? 'text-slate-600 hover:text-slate-900' : 'text-slate-400 hover:text-slate-200'
               }`}
               title="Compact Trace-only View"
@@ -153,42 +153,42 @@ export const PythonTutorViewer: React.FC<PythonTutorViewerProps> = ({ code, lang
             </button>
           </div>
 
-          {/* Options */}
-          <label className={`flex items-center space-x-1.5 px-2.5 py-1 rounded border cursor-pointer select-none ${
-            isLight ? 'bg-white border-slate-300 text-slate-800' : 'bg-black/40 border-white/10 text-slate-300'
+          {/* Options Widget */}
+          <label className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-full border backdrop-blur-md cursor-pointer select-none shadow-sm transition-all ${
+            isLight ? 'bg-white/80 border-slate-300/80 text-slate-800' : 'bg-white/5 border-white/10 text-slate-300'
           }`}>
             <input
               type="checkbox"
               checked={isCumulative}
               onChange={(e) => setIsCumulative(e.target.checked)}
-              className="rounded text-indigo-600 focus:ring-0"
+              className="rounded-full text-indigo-600 focus:ring-0"
             />
-            <span className="text-[11px]">Cumulative</span>
+            <span className="text-[11px] font-medium">Cumulative</span>
           </label>
 
-          {/* Reload Button */}
+          {/* Reload Button Widget */}
           <button
             onClick={handleRefresh}
-            className={`flex items-center space-x-1 px-2.5 py-1 rounded border transition-colors ${
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-full border backdrop-blur-md transition-all shadow-sm ${
               isLight
-                ? 'bg-white border-slate-300 hover:bg-slate-100 text-slate-800'
-                : 'bg-black/40 border-white/10 hover:bg-white/5 text-slate-300 hover:text-white'
+                ? 'bg-white/80 border-slate-300/80 hover:bg-white text-slate-800'
+                : 'bg-white/5 border-white/10 hover:bg-white/10 text-slate-300 hover:text-white'
             }`}
             title="Reload Python Tutor with current editor code"
           >
             <RefreshCw className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline text-xs">Sync Code</span>
+            <span className="hidden sm:inline text-xs font-semibold">Sync Code</span>
           </button>
 
-          {/* External Link */}
+          {/* External Link Widget */}
           {directTutorUrl && (
             <a
               href={directTutorUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className={`flex items-center space-x-1 px-2.5 py-1 rounded border transition-colors ${
+              className={`flex items-center space-x-1.5 px-3.5 py-1.5 rounded-full border backdrop-blur-md transition-all shadow-sm ${
                 isLight
-                  ? 'bg-indigo-50 border-indigo-200 text-indigo-900 hover:bg-indigo-100'
+                  ? 'bg-indigo-50/80 border-indigo-200 text-indigo-900 hover:bg-indigo-100'
                   : 'bg-indigo-600/30 border-indigo-500/40 hover:bg-indigo-600/50 text-indigo-200'
               }`}
               title="Open directly on pythontutor.com"
@@ -198,13 +198,13 @@ export const PythonTutorViewer: React.FC<PythonTutorViewerProps> = ({ code, lang
             </a>
           )}
 
-          {/* Fullscreen Toggle */}
+          {/* Fullscreen Toggle Widget */}
           <button
             onClick={() => setIsFullscreen(!isFullscreen)}
-            className={`p-1.5 rounded border transition-colors ${
+            className={`p-2 rounded-full border backdrop-blur-md transition-all shadow-sm ${
               isLight
-                ? 'bg-white border-slate-300 text-slate-700 hover:bg-slate-100'
-                : 'bg-black/40 border-white/10 hover:bg-white/5 text-slate-300 hover:text-white'
+                ? 'bg-white/80 border-slate-300/80 text-slate-700 hover:bg-white'
+                : 'bg-white/5 border-white/10 hover:bg-white/10 text-slate-300 hover:text-white'
             }`}
             title={isFullscreen ? "Exit Fullscreen" : "Fullscreen Visualizer"}
           >

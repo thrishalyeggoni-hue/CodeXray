@@ -234,10 +234,60 @@ export const DryRunPlayer: React.FC<DryRunPlayerProps> = ({
             <Terminal className="w-4 h-4 text-cyan-400" />
             <span className="font-semibold text-slate-300">Output Terminal</span>
           </div>
-          <span className="text-[10px] text-slate-500">stdout</span>
+          <span className="text-[10px] text-slate-500 font-mono">
+            Step {currentStepIndex + 1} of {steps.length} | Live Console Output
+          </span>
         </div>
-        <div className="p-2 bg-slate-900/80 rounded border border-slate-800 text-slate-200 min-h-[40px] whitespace-pre-wrap">
-          {currentStep?.consoleOutput || dryRunData.finalOutput || '$ (No output printed at this step)'}
+        <div className="p-3 bg-slate-900/90 rounded-lg border border-slate-800 text-slate-200 min-h-[70px] max-h-[180px] overflow-y-auto whitespace-pre-wrap leading-relaxed">
+          {(() => {
+            const currentStep = steps[currentStepIndex];
+            const isLastStep = currentStepIndex === steps.length - 1;
+
+            // Collect explicit console outputs up to current step
+            const stdoutLogs = steps
+              .slice(0, currentStepIndex + 1)
+              .map((s) => s.consoleOutput)
+              .filter((out): out is string => Boolean(out && out.trim().length > 0));
+
+            return (
+              <div className="space-y-2 text-[11px] font-mono">
+                {/* 1. If explicit stdout logs exist, render them line by line */}
+                {stdoutLogs.length > 0 && (
+                  <div className="space-y-1.5 text-emerald-300 font-semibold">
+                    {stdoutLogs.map((log, idx) => (
+                      <div key={idx} className="flex items-start space-x-2">
+                        <span className="text-emerald-500 select-none">&gt;</span>
+                        <span>{log}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* 2. Current step live trace log if no stdout for this step */}
+                {(!currentStep?.consoleOutput || currentStep.consoleOutput.trim() === '') && (
+                  <div className="text-cyan-300/90 flex items-start space-x-2">
+                    <span className="text-cyan-500 select-none">$</span>
+                    <div>
+                      <span>[Line {currentStep?.lineNumber}]: {currentStep?.lineContent}</span>
+                      <span className="text-slate-400 block text-[10.5px] mt-0.5 pl-2 border-l-2 border-cyan-500/30">
+                        → {currentStep?.explanation}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* 3. Program execution completion banner on final step */}
+                {(isLastStep || currentStepIndex === steps.length - 1) && dryRunData?.finalOutput && (
+                  <div className="mt-2.5 pt-2 border-t border-slate-800/80 text-emerald-400 font-bold flex flex-wrap items-center gap-2">
+                    <span className="px-2 py-0.5 rounded bg-emerald-950 border border-emerald-800/80 text-[10px] uppercase tracking-wider text-emerald-300">
+                      ✔ Process Finished
+                    </span>
+                    <span>Result / Output: {dryRunData.finalOutput}</span>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </div>
       </div>
     </div>

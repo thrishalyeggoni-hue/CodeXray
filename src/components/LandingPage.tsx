@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { motion } from 'motion/react';
 import {
   Sparkles,
   Layers,
@@ -45,14 +46,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       highlight: true,
     },
     {
-      icon: GitFork,
-      title: 'Interactive Flowcharts & Control Diagrams',
-      description:
-        'Automatically generate interactive Mermaid control flowcharts and architectural diagrams with zoom, pan, and direction toggles.',
-      color: 'text-cyan-400 bg-cyan-500/10 border-cyan-500/20',
-      highlight: true,
-    },
-    {
       icon: Layers,
       title: 'Line-by-Line Code Breakdown',
       description:
@@ -80,16 +73,19 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         'Prepare for technical interviews with realistic questions, candidate hints, key talking points, and model answer keys.',
       color: 'text-purple-400 bg-purple-500/10 border-purple-500/20',
     },
+    {
+      icon: BookOpen,
+      title: 'Algorithmic Revision Exam Notes',
+      description:
+        'Auto-generate structured revision study notes with algorithm steps, pros/cons, time complexity, and real-world usage.',
+      color: 'text-cyan-400 bg-cyan-500/10 border-cyan-500/20',
+    },
   ];
 
   const faqs = [
     {
       q: 'What is the Python Tutor Memory Visualizer feature?',
-      a: 'The Python Tutor engine is the signature highlight of CodeXray AI. It breaks down code execution step-by-step with visual stack frames, global pointer tables, array memory boxes, and flowcharts so you can see exactly how variables and memory change over time.',
-    },
-    {
-      q: 'How do flowcharts and control diagrams work?',
-      a: 'CodeXray AI parses your algorithm logic and automatically renders clean Mermaid.js flowcharts and diagrams. You can zoom, pan, switch top-to-bottom or left-to-right directions, and export SVG diagrams.',
+      a: 'The Python Tutor engine is the signature highlight of CodeXray AI. It breaks down code execution step-by-step with visual stack frames, global pointer tables, and array memory boxes so you can see exactly how variables and memory change over time.',
     },
     {
       q: 'Do I need a Google Account to use CodeXray AI?',
@@ -137,14 +133,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           <p className={`text-base sm:text-lg leading-relaxed max-w-2xl mx-auto ${
             isLight ? 'text-slate-600' : 'text-slate-400'
           }`}>
-            Deeply Xray any algorithm with our featured <strong className={isLight ? 'text-slate-900' : 'text-white'}>Python Tutor Memory Engine</strong>, step-by-step flowcharts, stack frame diagrams, dry run traces, and interview prep.
+            Deeply Xray any algorithm with our featured <strong className={isLight ? 'text-slate-900' : 'text-white'}>Python Tutor Memory Engine</strong>, stack frame diagrams, dry run traces, and interview prep.
           </p>
 
           {/* CTA Buttons */}
           <div className="flex flex-wrap items-center justify-center gap-4 pt-4">
             <button
               onClick={onLaunchDashboard}
-              className="flex items-center space-x-2.5 px-7 py-3.5 rounded-md bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm shadow-xl shadow-indigo-500/20 hover:scale-105 transition-all duration-200"
+              className="flex items-center space-x-2.5 px-8 py-3.5 rounded-full bg-indigo-600/90 hover:bg-indigo-500 text-white font-semibold text-sm shadow-xl shadow-indigo-500/30 border border-indigo-400/40 backdrop-blur-md hover:scale-105 transition-all duration-200"
             >
               <span>Launch Code Studio</span>
               <ArrowRight className="w-4 h-4" />
@@ -152,10 +148,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
             <button
               onClick={() => onSelectSample('binary-search-java')}
-              className={`flex items-center space-x-2 px-6 py-3.5 rounded-md border font-medium text-sm transition-colors ${
+              className={`flex items-center space-x-2 px-7 py-3.5 rounded-full border backdrop-blur-md font-medium text-sm shadow-sm transition-all ${
                 isLight
-                  ? 'bg-white border-slate-300 text-slate-800 hover:bg-slate-50 shadow-sm'
-                  : 'bg-[#0e0e10] border-white/10 text-slate-200 hover:bg-white/5'
+                  ? 'bg-white/80 border-slate-300 text-slate-800 hover:bg-white'
+                  : 'bg-white/5 border-white/15 text-slate-200 hover:bg-white/10'
               }`}
             >
               <Play className="w-3.5 h-3.5 text-indigo-500 fill-indigo-500" />
@@ -165,7 +161,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             {!user && onOpenLogin && (
               <button
                 onClick={onOpenLogin}
-                className="flex items-center space-x-2 px-5 py-3.5 rounded-md bg-white hover:bg-slate-50 text-slate-800 font-semibold text-sm border border-slate-300 shadow-sm transition-all"
+                className={`flex items-center space-x-2 px-6 py-3.5 rounded-full font-semibold text-sm border backdrop-blur-md shadow-sm transition-all ${
+                  isLight
+                    ? 'bg-white/90 border-slate-300 text-slate-800 hover:bg-white'
+                    : 'bg-white/10 border-white/15 text-slate-200 hover:bg-white/15'
+                }`}
               >
                 <svg className="w-4 h-4" viewBox="0 0 24 24">
                   <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/>
@@ -192,10 +192,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <span>Featured Engine: Python Tutor Step Visualizer</span>
               </div>
               <h2 className={`text-2xl sm:text-3xl font-extrabold ${isLight ? 'text-slate-900' : 'text-white'}`}>
-                Visualize Code Execution with Memory Diagrams & Flowcharts
+                Visualize Code Execution with Memory Diagrams & Stack Frames
               </h2>
               <p className={`text-xs sm:text-sm leading-relaxed ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
-                Python Tutor is the core highlight of CodeXray AI. It renders live memory diagrams, function stack frames, array pointers, and control flowcharts at every single line execution step.
+                Python Tutor is the core highlight of CodeXray AI. It renders live memory diagrams, function stack frames, and array pointers at every single line execution step.
               </p>
               <div className="flex flex-wrap gap-2 text-xs pt-1">
                 <span className={`px-2.5 py-1 rounded font-mono border ${
@@ -206,7 +206,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <span className={`px-2.5 py-1 rounded font-mono border ${
                   isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-black/40 border-white/10 text-slate-300'
                 }`}>
-                  📊 Mermaid Flowcharts
+                  📊 Array Memory Diagrams
                 </span>
                 <span className={`px-2.5 py-1 rounded font-mono border ${
                   isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-black/40 border-white/10 text-slate-300'
@@ -425,7 +425,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </p>
           <button
             onClick={onLaunchDashboard}
-            className="inline-flex items-center space-x-2.5 px-8 py-3.5 rounded-md bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm shadow-xl shadow-indigo-500/20 hover:scale-105 transition-all"
+            className="inline-flex items-center space-x-2.5 px-8 py-3.5 rounded-full bg-indigo-600/90 hover:bg-indigo-500 text-white font-semibold text-sm shadow-xl shadow-indigo-500/30 border border-indigo-400/40 backdrop-blur-md hover:scale-105 transition-all"
           >
             <span>Launch Code Studio Free</span>
             <ArrowRight className="w-4 h-4" />

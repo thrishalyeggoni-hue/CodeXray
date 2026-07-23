@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { motion } from 'motion/react';
 import {
   Sparkles,
   LayoutDashboard,
@@ -37,35 +38,42 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [showUserMenu, setShowUserMenu] = useState(false);
 
   return (
-    <header className={`sticky top-0 z-50 transition-colors duration-200 border-b backdrop-blur-md ${
+    <header className={`sticky top-0 z-50 transition-all duration-300 border-b backdrop-blur-xl ${
       isLight
-        ? 'border-slate-200 bg-white/90 text-slate-800 shadow-sm'
-        : 'border-white/5 bg-[#0e0e10]/90 text-slate-100'
+        ? 'border-slate-200/80 bg-white/80 text-slate-800 shadow-sm'
+        : 'border-white/10 bg-[#0a0a0e]/80 text-slate-100 shadow-lg shadow-purple-950/10'
     }`}>
+      {/* Top subtle gradient border line */}
+      <div className="h-[2px] w-full bg-gradient-to-r from-indigo-500 via-purple-500 to-cyan-400" />
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          {/* Transparent Logo Component */}
-          <div
+          {/* Logo Component */}
+          <motion.div
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
             onClick={() => setCurrentView('landing')}
-            className="cursor-pointer group"
+            className="cursor-pointer group flex items-center space-x-2"
           >
             <CodeXrayLogo
               theme={theme}
               size={34}
               subtitle="Understand Code. Don't Just Copy It."
             />
-          </div>
+          </motion.div>
 
           {/* Navigation Links, Theme Switcher & Google Account Login */}
           <div className="flex items-center space-x-2 sm:space-x-3">
             {/* Theme Toggle Button */}
             {onToggleTheme && (
-              <button
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={onToggleTheme}
-                className={`flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-full text-xs font-semibold backdrop-blur-md transition-all shadow-sm ${
                   isLight
-                    ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300'
-                    : 'bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10'
+                    ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300/80'
+                    : 'bg-white/10 hover:bg-white/20 text-slate-200 border border-white/15'
                 }`}
                 title={isLight ? "Switch to Dark Mode" : "Switch to Light Mode"}
               >
@@ -76,53 +84,57 @@ export const Navbar: React.FC<NavbarProps> = ({
                   </>
                 ) : (
                   <>
-                    <Sun className="w-3.5 h-3.5 text-amber-400" />
+                    <Sun className="w-3.5 h-3.5 text-amber-400 animate-spin-slow" />
                     <span className="hidden sm:inline">Light</span>
                   </>
                 )}
-              </button>
+              </motion.button>
             )}
 
-            <button
+            <motion.button
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
               onClick={() => setCurrentView('landing')}
-              className={`flex items-center space-x-2 px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+              className={`flex items-center space-x-2 px-3.5 py-1.5 rounded-full text-xs font-medium backdrop-blur-md transition-all ${
                 currentView === 'landing'
                   ? isLight
-                    ? 'bg-slate-200 text-slate-900 font-semibold'
-                    : 'bg-white/10 text-white border border-white/10 shadow-sm'
+                    ? 'bg-slate-900 text-white font-semibold shadow-md'
+                    : 'bg-gradient-to-r from-slate-800 to-slate-900 text-white border border-white/20 shadow-md'
                   : isLight
-                    ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                    : 'text-slate-400 hover:text-white hover:bg-white/5'
+                    ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-transparent'
+                    : 'text-slate-300 hover:text-white hover:bg-white/10 border border-transparent'
               }`}
             >
-              <Home className="w-3.5 h-3.5" />
+              <Home className="w-3.5 h-3.5 text-cyan-400" />
               <span className="hidden md:inline">Overview</span>
-            </button>
+            </motion.button>
 
-            <button
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
               onClick={() => setCurrentView('dashboard')}
-              className={`flex items-center space-x-2 px-3.5 py-1.5 rounded text-xs font-semibold transition-all duration-200 shadow-md ${
+              className={`flex items-center space-x-2 px-4 py-1.5 rounded-full text-xs font-semibold backdrop-blur-md transition-all duration-200 shadow-lg ${
                 currentView === 'dashboard'
-                  ? 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-500/20 ring-1 ring-indigo-400/30'
+                  ? 'bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-500 hover:to-pink-500 text-white shadow-purple-500/25 border border-purple-400/30'
                   : isLight
                     ? 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200'
-                    : 'bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 border border-indigo-500/30'
+                    : 'bg-indigo-500/15 text-indigo-300 hover:bg-indigo-500/25 border border-indigo-500/30'
               }`}
             >
               <LayoutDashboard className="w-3.5 h-3.5" />
               <span>Studio</span>
-              <Sparkles className="w-3 h-3 text-indigo-200 animate-pulse" />
-            </button>
+              <Sparkles className="w-3 h-3 text-amber-300 animate-pulse" />
+            </motion.button>
 
             {/* Google Account Authentication */}
             {user ? (
               <div className="relative">
                 <button
                   onClick={() => setShowUserMenu(!showUserMenu)}
-                  className={`flex items-center space-x-2 pl-1.5 pr-2 py-1 rounded-full border transition-all ${
+                  className={`flex items-center space-x-2 pl-1.5 pr-2.5 py-1 rounded-full border backdrop-blur-md transition-all ${
                     isLight
-                      ? 'bg-slate-50 border-slate-300 hover:bg-slate-100'
-                      : 'bg-[#16161c] border-white/10 hover:bg-white/10'
+                      ? 'bg-white/70 border-slate-300/80 hover:bg-white/90 shadow-sm'
+                      : 'bg-white/5 border-white/10 hover:bg-white/10 shadow-sm'
                   }`}
                 >
                   <img
@@ -141,11 +153,11 @@ export const Navbar: React.FC<NavbarProps> = ({
                 {/* Dropdown Menu */}
                 {showUserMenu && (
                   <div
-                    className={`absolute right-0 mt-2 w-56 rounded-xl border shadow-2xl p-2 space-y-1 z-50 ${
-                      isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-[#141419] border-white/10 text-slate-200'
+                    className={`absolute right-0 mt-2 w-56 rounded-2xl border backdrop-blur-xl shadow-2xl p-2 space-y-1 z-50 ${
+                      isLight ? 'bg-white/90 border-slate-200/90 text-slate-800' : 'bg-[#141419]/90 border-white/15 text-slate-200'
                     }`}
                   >
-                    <div className="p-2 border-b border-white/5">
+                    <div className="p-2 border-b border-white/10">
                       <p className="text-xs font-bold truncate">{user.name}</p>
                       <p className="text-[11px] text-slate-400 truncate">{user.email}</p>
                       <div className="mt-1 flex items-center space-x-1">
@@ -164,8 +176,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                         setShowUserMenu(false);
                         setCurrentView('dashboard');
                       }}
-                      className={`w-full flex items-center space-x-2 px-2.5 py-1.5 rounded-lg text-xs transition-colors ${
-                        isLight ? 'hover:bg-slate-100 text-slate-700' : 'hover:bg-white/5 text-slate-300'
+                      className={`w-full flex items-center space-x-2 px-3 py-1.5 rounded-full text-xs transition-colors ${
+                        isLight ? 'hover:bg-slate-100 text-slate-700' : 'hover:bg-white/10 text-slate-300'
                       }`}
                     >
                       <User className="w-3.5 h-3.5 text-indigo-500" />
@@ -177,7 +189,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                         setShowUserMenu(false);
                         if (onSignOut) onSignOut();
                       }}
-                      className="w-full flex items-center space-x-2 px-2.5 py-1.5 rounded-lg text-xs text-rose-500 hover:bg-rose-500/10 transition-colors"
+                      className="w-full flex items-center space-x-2 px-3 py-1.5 rounded-full text-xs text-rose-500 hover:bg-rose-500/10 transition-colors"
                     >
                       <LogOut className="w-3.5 h-3.5" />
                       <span>Sign Out</span>
@@ -188,7 +200,11 @@ export const Navbar: React.FC<NavbarProps> = ({
             ) : (
               <button
                 onClick={onOpenLogin}
-                className="flex items-center space-x-2 px-3 py-1.5 rounded-lg text-xs font-semibold bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 shadow-sm transition-all"
+                className={`flex items-center space-x-2 px-3.5 py-1.5 rounded-full text-xs font-semibold backdrop-blur-md shadow-sm transition-all border ${
+                  isLight
+                    ? 'bg-white/80 hover:bg-white text-slate-800 border-slate-300'
+                    : 'bg-white/10 hover:bg-white/15 text-slate-200 border-white/15'
+                }`}
                 title="Sign in with Google Account"
               >
                 <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24">
