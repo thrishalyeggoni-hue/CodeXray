@@ -17,6 +17,7 @@ import { ComplexityChart } from './ComplexityChart';
 import { QuizView } from './QuizView';
 import { InterviewView } from './InterviewView';
 import { NotesView } from './NotesView';
+import { fetchApiWithLogging } from '../services/apiService';
 import {
   Sparkles,
   Play,
@@ -106,20 +107,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ initialSampleId }) => {
     setAnalysisError(null);
 
     try {
-      const safeFetch = async (endpoint: string) => {
-        try {
-          const r = await fetch(endpoint, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ code, language }),
-          });
-          if (!r.ok) return null;
-          return await r.json();
-        } catch {
-          return null;
-        }
-      };
-
       const [
         analyzeRes,
         dryRunRes,
@@ -128,12 +115,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ initialSampleId }) => {
         interviewRes,
         notesRes,
       ] = await Promise.all([
-        safeFetch('/api/analyze'),
-        safeFetch('/api/dryrun'),
-        safeFetch('/api/flowchart'),
-        safeFetch('/api/quiz'),
-        safeFetch('/api/interview'),
-        safeFetch('/api/notes'),
+        fetchApiWithLogging<AnalysisResponse>('/api/analyze', { code, language }),
+        fetchApiWithLogging<DryRunResponse>('/api/dryrun', { code, language }),
+        fetchApiWithLogging<FlowchartResponse>('/api/flowchart', { code, language }),
+        fetchApiWithLogging<QuizResponse>('/api/quiz', { code, language }),
+        fetchApiWithLogging<InterviewResponse>('/api/interview', { code, language }),
+        fetchApiWithLogging<NotesResponse>('/api/notes', { code, language }),
       ]);
 
       if (analyzeRes) setAnalysisData(analyzeRes);
@@ -153,17 +140,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ initialSampleId }) => {
   const handleRegenerateFlowchart = async () => {
     setIsRegeneratingFlowchart(true);
     try {
-      const res = await fetch('/api/flowchart', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code, language }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data) setFlowchartData(data);
+      const data = await fetchApiWithLogging<FlowchartResponse>('/api/flowchart', { code, language });
+      if (data && data.mermaidCode) {
+        setFlowchartData(data);
       }
     } catch (err) {
-      console.error('Failed to regenerate flowchart:', err);
+      console.error('[Client Network Error] Failed to regenerate flowchart:', err);
     } finally {
       setIsRegeneratingFlowchart(false);
     }

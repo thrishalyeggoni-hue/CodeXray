@@ -21,10 +21,35 @@ interface FlowchartViewerProps {
   isRegenerating?: boolean;
 }
 
+function getClosingBracket(open: string): string {
+  const bracketMap: { [key: string]: string } = {
+    '([': '])', // Stadium
+    '[[': ']]', // Subroutine
+    '[(': ')]', // Cylinder
+    '((': '))', // Circle
+    '(': ')', // Rounded
+    '[': ']', // Rectangle
+    '{': '}', // Diamond
+  };
+  return bracketMap[open.trim()] || open;
+}
+
+function cleanLabelText(str: string): string {
+  let s = str.trim();
+  if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
+    s = s.slice(1, -1).trim();
+  }
+  s = s.replace(/"/g, "'");
+  s = s.replace(/[\r\n]+/g, ' ');
+  return `"${s}"`;
+}
+
 function sanitizeMermaidCode(rawCode: string): string {
   if (!rawCode) return 'graph TD\n  Start(["Start Execution"]) --> End(["End Execution"])';
 
   let code = rawCode.trim();
+  code = code.replace(/```mermaid/gi, '').replace(/```/g, '').trim();
+
   if (!code.startsWith('graph') && !code.startsWith('flowchart')) {
     code = 'graph TD\n' + code;
   }
@@ -33,22 +58,56 @@ function sanitizeMermaidCode(rawCode: string): string {
   const sanitizedLines = lines.map((line) => {
     let l = line.trim();
     if (!l) return '';
-    if (l.startsWith('graph') || l.startsWith('flowchart')) return l;
+    if (/^\s*(graph|flowchart|subgraph|end|style|classDef|click)\b/i.test(l)) {
+      return l;
+    }
 
-    // Ensure shape contents are wrapped in double quotes
-    l = l.replace(/([A-Za-z0-9_]+)\s*(\[\(|\{|\[)(.*?)(\)\]|\}|\])/g, (_, id, openShape, content, closeShape) => {
-      let trimmed = content.trim();
-      if ((trimmed.startsWith('"') && trimmed.endsWith('"')) || (trimmed.startsWith("'") && trimmed.endsWith("'"))) {
-        trimmed = trimmed.slice(1, -1);
-      }
-      trimmed = trimmed.replace(/"/g, "'");
-      return `${id}${openShape}"${trimmed}"${closeShape}`;
+    // Convert legacy edge decision labels like A -- "Label" --> B or A -- Label --> B to A -->|Label| B
+    l = l.replace(/--\s*"?([^\n"->]+)"?\s*-->/g, (_, edgeLabel) => {
+      const cleanEdge = edgeLabel.trim().replace(/\|/g, '/');
+      return `-->|${cleanEdge}|`;
+    });
+
+    // Match node shape patterns: ID + opening brackets + label content + closing brackets
+    // 1. Stadium shape: ID(["Label"])
+    l = l.replace(/\b([A-Za-z0-9_]+)\s*\(\[\s*(.*?)\s*\]\)/g, (_, id, content) => {
+      return `${id}([${cleanLabelText(content)}])`;
+    });
+
+    // 2. Subroutine shape: ID[["Label"]]
+    l = l.replace(/\b([A-Za-z0-9_]+)\s*\[\[\s*(.*?)\s*\]\]/g, (_, id, content) => {
+      return `${id}[[${cleanLabelText(content)}]]`;
+    });
+
+    // 3. Cylinder shape: ID[("Label")]
+    l = l.replace(/\b([A-Za-z0-9_]+)\s*\[\(\s*(.*?)\s*\)\]/g, (_, id, content) => {
+      return `${id}[(${cleanLabelText(content)})]`;
+    });
+
+    // 4. Circle shape: ID(("Label"))
+    l = l.replace(/\b([A-Za-z0-9_]+)\s*\(\(\s*(.*?)\s*\)\)/g, (_, id, content) => {
+      return `${id}((${cleanLabelText(content)}))`;
+    });
+
+    // 5. Rectangle shape: ID["Label"]
+    l = l.replace(/\b([A-Za-z0-9_]+)\s*\[(?![\[\(])\s*(.*?)\s*(?<![\]\)])\]/g, (_, id, content) => {
+      return `${id}[${cleanLabelText(content)}]`;
+    });
+
+    // 6. Rhombus/Diamond shape: ID{"Label"}
+    l = l.replace(/\b([A-Za-z0-9_]+)\s*\{\s*(.*?)\s*\}/g, (_, id, content) => {
+      return `${id}{${cleanLabelText(content)}}`;
+    });
+
+    // 7. Round shape: ID("Label")
+    l = l.replace(/\b([A-Za-z0-9_]+)\s*\((?![\[\(])\s*(.*?)\s*(?<![\]\)])\)/g, (_, id, content) => {
+      return `${id}(${cleanLabelText(content)})`;
     });
 
     return l;
   });
 
-  return sanitizedLines.join('\n');
+  return sanitizedLines.filter(Boolean).join('\n');
 }
 
 export const FlowchartViewer: React.FC<FlowchartViewerProps> = ({
@@ -115,7 +174,12 @@ export const FlowchartViewer: React.FC<FlowchartViewerProps> = ({
     try {
       await mermaid.parse(processedCode);
     } catch (parseErr: any) {
-      console.error('Mermaid parse error:', parseErr);
+      console.error('[Mermaid Syntax Parse Error]:', {
+        error: parseErr,
+        message: parseErr?.message || parseErr,
+        rawMermaidCode: codeToRender,
+        processedMermaidCode: processedCode,
+      });
       setRenderError(`Flowchart syntax error detected. Failed to parse diagram definition.`);
       return;
     }
@@ -133,7 +197,12 @@ export const FlowchartViewer: React.FC<FlowchartViewerProps> = ({
         }
       }
     } catch (err: any) {
-      console.error('Mermaid render error:', err);
+      console.error('[Mermaid Render Error]:', {
+        error: err,
+        message: err?.message || err,
+        rawMermaidCode: codeToRender,
+        processedMermaidCode: processedCode,
+      });
       setRenderError('Flowchart syntax error detected. Click "Debug Syntax" below to inspect or auto-fix.');
       const errorElem = document.getElementById(uniqueId);
       if (errorElem) errorElem.remove();

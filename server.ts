@@ -140,7 +140,7 @@ Provide:
     const parsed = JSON.parse(cleanJsonText(response.text || "{}"));
     res.json(parsed);
   } catch (error: any) {
-    console.warn("Falling back for /api/analyze due to API limit or error:", error?.message || error);
+    console.error("[Backend API Error] /api/analyze generation or parsing failed:", error);
     const { code, language } = req.body || {};
     res.json(generateFallbackAnalysis(code || "", language || "text"));
   }
@@ -169,13 +169,14 @@ ${code}
 Return a JSON object containing:
 - mermaidCode: Valid Mermaid.js diagram starting with "graph TD".
   CRITICAL SYNTAX RULES:
-  1. ALWAYS enclose node label text in double quotes inside brackets/shapes!
+  1. ALWAYS enclose node label text in double quotes inside shapes!
      Examples:
-     A(["Start Execution"]) --> B{"Is arr[i] == target?"}
-     B -- "Yes" --> C["return i"]
-     B -- "No" --> D["i = i + 1"]
-  2. Do NOT use unquoted special characters like <, >, ==, [, ], (, ), ||, &&, or colons inside shape boundaries.
-  3. Keep the graph clean and max 10 nodes.
+     Start(["Start Execution"]) --> Check{"Is arr[i] == target?"}
+  2. For edge decision labels, ALWAYS use pipe syntax (e.g. -->|Yes| or -->|No|):
+     Check -->|Yes| Action["return index i"]
+     Check -->|No| Next["i = i + 1"]
+  3. Do NOT use unquoted special characters like <, >, ==, [, ], (, ), ||, && inside labels or edge texts.
+  4. Keep the graph clean and concise with at most 8-10 nodes.
 - explanation: A short 2-sentence description of the workflow.`;
 
     const response = await ai.models.generateContent({
@@ -197,7 +198,7 @@ Return a JSON object containing:
     const parsed = JSON.parse(cleanJsonText(response.text || "{}"));
     res.json(parsed);
   } catch (error) {
-    console.warn("Falling back for /api/flowchart due to API limit or error:", error);
+    console.error("[Backend API Error] /api/flowchart generation or parsing failed:", error);
     res.json(generateFallbackFlowchart(req.body.code || ""));
   }
 });
@@ -245,7 +246,7 @@ Return JSON:
     const parsed = JSON.parse(cleanJsonText(response.text || "{}"));
     res.json(parsed);
   } catch (error) {
-    console.warn("Falling back for /api/dryrun due to API limit or error:", error);
+    console.error("[Backend API Error] /api/dryrun generation or parsing failed:", error);
     res.json(generateFallbackDryRun(req.body.code || ""));
   }
 });
@@ -314,7 +315,7 @@ Return JSON:
     const parsed = JSON.parse(cleanJsonText(response.text || "{}"));
     res.json(parsed);
   } catch (error) {
-    console.warn("Falling back for /api/quiz due to API limit or error:", error);
+    console.error("[Backend API Error] /api/quiz generation or parsing failed:", error);
     res.json(generateFallbackQuiz(req.body.code || ""));
   }
 });
@@ -360,7 +361,7 @@ Return JSON:
     const parsed = JSON.parse(cleanJsonText(response.text || "{}"));
     res.json(parsed);
   } catch (error) {
-    console.warn("Falling back for /api/interview due to API limit or error:", error);
+    console.error("[Backend API Error] /api/interview generation or parsing failed:", error);
     res.json(generateFallbackInterview(req.body.code || ""));
   }
 });
@@ -405,7 +406,7 @@ Return JSON:
     const parsed = JSON.parse(cleanJsonText(response.text || "{}"));
     res.json(parsed);
   } catch (error) {
-    console.warn("Falling back for /api/notes due to API limit or error:", error);
+    console.error("[Backend API Error] /api/notes generation or parsing failed:", error);
     res.json(generateFallbackNotes(req.body.code || ""));
   }
 });
@@ -453,12 +454,12 @@ function generateFallbackFlowchart(code: string) {
   return {
     mermaidCode: `graph TD
   Start(["Start Execution"]) --> CheckInput{"Validate Input"}
-  CheckInput -- "Valid" --> Loop["Process Code Logic"]
-  CheckInput -- "Invalid" --> ReturnErr["Return Error"]
+  CheckInput -->|Valid| Loop["Process Code Logic"]
+  CheckInput -->|Invalid| ReturnErr["Return Error"]
   Loop --> CheckCond{"Condition Met?"}
-  CheckCond -- "Yes" --> ExecuteStep["Execute Action"]
+  CheckCond -->|Yes| ExecuteStep["Execute Action"]
   ExecuteStep --> Loop
-  CheckCond -- "No" --> EndVal(["Return Result"])`,
+  CheckCond -->|No| EndVal(["Return Result"])`,
     explanation: "Standard control flow representing initialization, conditional checking, and loop processing.",
   };
 }
