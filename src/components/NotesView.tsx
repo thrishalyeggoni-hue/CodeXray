@@ -16,15 +16,19 @@ import {
 
 interface NotesViewProps {
   notesData: NotesResponse | null;
+  theme?: 'dark' | 'light';
 }
 
-export const NotesView: React.FC<NotesViewProps> = ({ notesData }) => {
+export const NotesView: React.FC<NotesViewProps> = ({ notesData, theme = 'dark' }) => {
+  const isLight = theme === 'light';
   const [copied, setCopied] = useState(false);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
 
   if (!notesData) {
     return (
-      <div className="p-8 text-center text-slate-500 bg-[#0e0e10] rounded-xl border border-white/5 text-xs">
+      <div className={`p-8 text-center rounded-xl border text-xs ${
+        isLight ? 'bg-slate-50 border-slate-200 text-slate-500' : 'bg-[#0e0e10] border-white/5 text-slate-500'
+      }`}>
         No study notes generated yet. Click "Analyze Code" to prepare exam revision notes.
       </div>
     );
@@ -268,13 +272,15 @@ ${notesData.cheatSheetSummary}
   return (
     <div className="space-y-6">
       {/* Header Bar */}
-      <div className="p-4 rounded-xl bg-[#0e0e10] border border-white/5 shadow-xl flex flex-wrap items-center justify-between gap-4">
+      <div className={`p-4 rounded-xl border shadow-sm flex flex-wrap items-center justify-between gap-4 ${
+        isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-[#0e0e10] border-white/5 text-slate-200'
+      }`}>
         <div>
-          <div className="flex items-center space-x-2 text-indigo-400 text-xs font-semibold uppercase tracking-wider">
+          <div className="flex items-center space-x-2 text-indigo-600 dark:text-indigo-400 text-xs font-semibold uppercase tracking-wider">
             <BookOpen className="w-4 h-4" />
             <span>Exam & Interview Revision Cheat Sheet</span>
           </div>
-          <h3 className="text-lg font-bold text-white mt-1">
+          <h3 className={`text-lg font-bold mt-1 ${isLight ? 'text-slate-900' : 'text-white'}`}>
             {notesData.title || 'Algorithmic Study Notes'}
           </h3>
         </div>
@@ -283,13 +289,17 @@ ${notesData.cheatSheetSummary}
           {/* Copy Markdown */}
           <button
             onClick={handleCopyMarkdown}
-            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-white/5 text-slate-200 hover:bg-white/10 text-xs font-medium transition-colors"
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border ${
+              isLight
+                ? 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300'
+                : 'bg-white/5 hover:bg-white/10 text-slate-200 border-transparent'
+            }`}
             title="Copy Markdown representation"
           >
             {copied ? (
-              <Check className="w-3.5 h-3.5 text-emerald-400" />
+              <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
             ) : (
-              <Copy className="w-3.5 h-3.5 text-indigo-400" />
+              <Copy className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
             )}
             <span>{copied ? 'Copied' : 'Copy MD'}</span>
           </button>
@@ -297,27 +307,35 @@ ${notesData.cheatSheetSummary}
           {/* Print Preview Modal Toggle */}
           <button
             onClick={() => setShowPreviewModal(true)}
-            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-white/5 text-slate-200 hover:bg-white/10 text-xs font-medium transition-colors"
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border ${
+              isLight
+                ? 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300'
+                : 'bg-white/5 hover:bg-white/10 text-slate-200 border-transparent'
+            }`}
             title="Open Clean Light Mode Print Sheet"
           >
-            <Eye className="w-3.5 h-3.5 text-cyan-400" />
+            <Eye className="w-3.5 h-3.5 text-indigo-600 dark:text-cyan-400" />
             <span>Preview Sheet</span>
           </button>
 
           {/* Download HTML */}
           <button
             onClick={handleDownloadHtml}
-            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-white/5 text-slate-200 hover:bg-white/10 text-xs font-medium transition-colors"
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border ${
+              isLight
+                ? 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300'
+                : 'bg-white/5 hover:bg-white/10 text-slate-200 border-transparent'
+            }`}
             title="Download printable HTML file for offline saving/printing"
           >
-            <Download className="w-3.5 h-3.5 text-emerald-400" />
+            <Download className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
             <span>Save HTML</span>
           </button>
 
           {/* Primary Print Button */}
           <button
             onClick={handlePrint}
-            className="flex items-center space-x-1.5 px-3.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-lg shadow-indigo-500/20 transition-all"
+            className="flex items-center space-x-1.5 px-3.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md transition-all"
             title="Print or Save as PDF"
           >
             <Printer className="w-3.5 h-3.5" />
@@ -327,21 +345,29 @@ ${notesData.cheatSheetSummary}
       </div>
 
       {/* Main Printable Notes Container */}
-      <div className="printable-notes p-6 rounded-xl bg-[#0e0e10] border border-white/5 space-y-6 text-slate-300">
+      <div className={`printable-notes p-6 rounded-xl border space-y-6 ${
+        isLight
+          ? 'bg-white border-slate-200 text-slate-800 shadow-sm'
+          : 'bg-[#0e0e10] border-white/5 text-slate-300'
+      }`}>
         {/* Definition Summary */}
         <div className="space-y-2">
-          <h4 className="text-xs font-bold text-indigo-400 uppercase tracking-wider flex items-center space-x-2">
+          <h4 className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider flex items-center space-x-2">
             <Bookmark className="w-3.5 h-3.5" />
             <span>1. Core Definition & Overview</span>
           </h4>
-          <p className="text-xs leading-relaxed bg-black/40 p-4 rounded-xl border border-white/5 text-slate-200">
+          <p className={`text-xs leading-relaxed p-4 rounded-xl border ${
+            isLight
+              ? 'bg-slate-50 border-slate-200 text-slate-900'
+              : 'bg-black/40 border-white/5 text-slate-200'
+          }`}>
             {notesData.summary}
           </p>
         </div>
 
         {/* Algorithm Steps */}
         <div className="space-y-2">
-          <h4 className="text-xs font-bold text-indigo-400 uppercase tracking-wider flex items-center space-x-2">
+          <h4 className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider flex items-center space-x-2">
             <FileText className="w-3.5 h-3.5" />
             <span>2. Step-by-Step Execution Logic</span>
           </h4>
@@ -349,7 +375,11 @@ ${notesData.cheatSheetSummary}
             {notesData.algorithmSteps.map((step, idx) => (
               <div
                 key={idx}
-                className="p-3 bg-black/40 rounded-xl border border-white/5 text-slate-200 font-mono text-[11px]"
+                className={`p-3 rounded-xl border font-mono text-[11px] ${
+                  isLight
+                    ? 'bg-slate-50 border-slate-200 text-slate-900'
+                    : 'bg-black/40 border-white/5 text-slate-200'
+                }`}
               >
                 {step}
               </div>
@@ -359,32 +389,40 @@ ${notesData.cheatSheetSummary}
 
         {/* Complexity Summary */}
         <div className="space-y-2">
-          <h4 className="text-xs font-bold text-indigo-400 uppercase tracking-wider flex items-center space-x-2">
+          <h4 className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider flex items-center space-x-2">
             <CheckCircle2 className="w-3.5 h-3.5" />
             <span>3. Complexity Bounds</span>
           </h4>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono">
-            <div className="p-3 rounded-xl bg-black/40 border border-white/5 text-center">
-              <div className="text-[10px] text-slate-400">Best Case</div>
-              <div className="text-emerald-400 font-bold mt-0.5">
+            <div className={`p-3 rounded-xl border text-center ${
+              isLight ? 'bg-slate-50 border-slate-200' : 'bg-black/40 border-white/5'
+            }`}>
+              <div className={`text-[10px] ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>Best Case</div>
+              <div className="text-emerald-600 dark:text-emerald-400 font-bold mt-0.5">
                 {notesData.complexitySummary.best}
               </div>
             </div>
-            <div className="p-3 rounded-xl bg-black/40 border border-white/5 text-center">
-              <div className="text-[10px] text-slate-400">Average Case</div>
-              <div className="text-indigo-400 font-bold mt-0.5">
+            <div className={`p-3 rounded-xl border text-center ${
+              isLight ? 'bg-slate-50 border-slate-200' : 'bg-black/40 border-white/5'
+            }`}>
+              <div className={`text-[10px] ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>Average Case</div>
+              <div className="text-indigo-600 dark:text-indigo-400 font-bold mt-0.5">
                 {notesData.complexitySummary.average}
               </div>
             </div>
-            <div className="p-3 rounded-xl bg-black/40 border border-white/5 text-center">
-              <div className="text-[10px] text-slate-400">Worst Case</div>
-              <div className="text-amber-400 font-bold mt-0.5">
+            <div className={`p-3 rounded-xl border text-center ${
+              isLight ? 'bg-slate-50 border-slate-200' : 'bg-black/40 border-white/5'
+            }`}>
+              <div className={`text-[10px] ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>Worst Case</div>
+              <div className="text-amber-600 dark:text-amber-400 font-bold mt-0.5">
                 {notesData.complexitySummary.worst}
               </div>
             </div>
-            <div className="p-3 rounded-xl bg-black/40 border border-white/5 text-center">
-              <div className="text-[10px] text-slate-400">Space Aux</div>
-              <div className="text-purple-400 font-bold mt-0.5">
+            <div className={`p-3 rounded-xl border text-center ${
+              isLight ? 'bg-slate-50 border-slate-200' : 'bg-black/40 border-white/5'
+            }`}>
+              <div className={`text-[10px] ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>Space Aux</div>
+              <div className="text-purple-600 dark:text-purple-400 font-bold mt-0.5">
                 {notesData.complexitySummary.space}
               </div>
             </div>
@@ -393,21 +431,25 @@ ${notesData.cheatSheetSummary}
 
         {/* Pros & Cons */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-          <div className="p-4 rounded-xl bg-black/40 border border-white/5 space-y-2">
-            <h5 className="font-bold text-emerald-400 uppercase tracking-wider text-[11px]">
+          <div className={`p-4 rounded-xl border space-y-2 ${
+            isLight ? 'bg-slate-50 border-slate-200 text-slate-800' : 'bg-black/40 border-white/5 text-slate-300'
+          }`}>
+            <h5 className="font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider text-[11px]">
               Pros & Advantages
             </h5>
-            <ul className="list-disc list-inside space-y-1 text-slate-300">
+            <ul className="list-disc list-inside space-y-1">
               {notesData.prosAndCons.pros.map((p, idx) => (
                 <li key={idx}>{p}</li>
               ))}
             </ul>
           </div>
-          <div className="p-4 rounded-xl bg-black/40 border border-white/5 space-y-2">
-            <h5 className="font-bold text-rose-400 uppercase tracking-wider text-[11px]">
+          <div className={`p-4 rounded-xl border space-y-2 ${
+            isLight ? 'bg-slate-50 border-slate-200 text-slate-800' : 'bg-black/40 border-white/5 text-slate-300'
+          }`}>
+            <h5 className="font-bold text-rose-700 dark:text-rose-400 uppercase tracking-wider text-[11px]">
               Trade-offs & Cons
             </h5>
-            <ul className="list-disc list-inside space-y-1 text-slate-300">
+            <ul className="list-disc list-inside space-y-1">
               {notesData.prosAndCons.cons.map((c, idx) => (
                 <li key={idx}>{c}</li>
               ))}
@@ -417,14 +459,18 @@ ${notesData.cheatSheetSummary}
 
         {/* Real World Applications */}
         <div className="space-y-2">
-          <h4 className="text-xs font-bold text-indigo-400 uppercase tracking-wider">
+          <h4 className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">
             4. Real-World Applications & Use Cases
           </h4>
           <div className="flex flex-wrap gap-2 text-xs">
             {notesData.realWorldApplications.map((app, idx) => (
               <span
                 key={idx}
-                className="px-3 py-1.5 rounded-lg bg-black/40 border border-white/5 text-slate-300"
+                className={`px-3 py-1.5 rounded-lg border ${
+                  isLight
+                    ? 'bg-indigo-50 border-indigo-200 text-indigo-900 font-medium'
+                    : 'bg-black/40 border-white/5 text-slate-300'
+                }`}
               >
                 {app}
               </span>
@@ -433,9 +479,13 @@ ${notesData.cheatSheetSummary}
         </div>
 
         {/* High Yield Takeaways */}
-        <div className="p-4 rounded-xl bg-indigo-950/20 border border-indigo-500/20 space-y-1 text-xs">
-          <div className="font-bold text-indigo-300">⚡ Last-Minute Exam Takeaways</div>
-          <p className="text-slate-300 leading-relaxed">
+        <div className={`p-4 rounded-xl border space-y-1 text-xs ${
+          isLight
+            ? 'bg-indigo-50 border-indigo-200 text-indigo-950'
+            : 'bg-indigo-950/20 border-indigo-500/20 text-slate-300'
+        }`}>
+          <div className="font-bold text-indigo-800 dark:text-indigo-300">⚡ Last-Minute Exam Takeaways</div>
+          <p className="leading-relaxed">
             {notesData.cheatSheetSummary}
           </p>
         </div>

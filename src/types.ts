@@ -109,3 +109,12 @@ export interface SampleCode {
   description: string;
   difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
 }
+
+export interface GoogleUser {
+  id: string;
+  name: string;
+  email: string;
+  picture: string;
+  signedInAt: string;
+}
+

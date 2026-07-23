@@ -41,18 +41,17 @@ function cleanJsonText(text: string): string {
 
 // 1. Core Code Analysis API
 app.post("/api/analyze", async (req, res) => {
-  try {
-    const { code, language } = req.body;
-    if (!code || typeof code !== "string") {
-      return res.status(400).json({ error: "Code snippet is required." });
-    }
+  const { code, language } = req.body || {};
+  if (!code || typeof code !== "string") {
+    return res.status(400).json({ error: "Code snippet is required." });
+  }
 
-    const ai = getGenAI();
-    if (!ai) {
-      return res.json(generateFallbackAnalysis(code, language));
-    }
+  const ai = getGenAI();
+  if (!ai) {
+    return res.json(generateFallbackAnalysis(code, language));
+  }
 
-    const prompt = `Analyze the following ${language || "code"} snippet thoroughly and return a structured JSON response.
+  const prompt = `Analyze the following ${language || "code"} snippet thoroughly and return a structured JSON response.
 
 Code snippet:
 \`\`\`${language || "text"}
@@ -76,90 +75,102 @@ Provide:
 10. commonMistakes: array of 2-3 common bugs or anti-patterns beginners make with this code.
 11. keyConcepts: array of 3-5 computer science or language concepts used (e.g. Recursion, Hash Map, Binary Search).`;
 
+  const config = {
+    responseMimeType: "application/json",
+    responseSchema: {
+      type: Type.OBJECT,
+      properties: {
+        summary: { type: Type.STRING },
+        corePurpose: { type: Type.STRING },
+        lineByLine: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              lineNumber: { type: Type.INTEGER },
+              code: { type: Type.STRING },
+              explanation: { type: Type.STRING },
+              variableChanges: { type: Type.STRING },
+            },
+            required: ["lineNumber", "code", "explanation"],
+          },
+        },
+        timeComplexity: { type: Type.STRING },
+        spaceComplexity: { type: Type.STRING },
+        complexityReasoning: { type: Type.STRING },
+        optimizations: {
+          type: Type.ARRAY,
+          items: { type: Type.STRING },
+        },
+        beginnerAnalogy: { type: Type.STRING },
+        interviewQuestions: {
+          type: Type.ARRAY,
+          items: { type: Type.STRING },
+        },
+        commonMistakes: {
+          type: Type.ARRAY,
+          items: { type: Type.STRING },
+        },
+        keyConcepts: {
+          type: Type.ARRAY,
+          items: { type: Type.STRING },
+        },
+      },
+      required: [
+        "summary",
+        "corePurpose",
+        "lineByLine",
+        "timeComplexity",
+        "spaceComplexity",
+        "complexityReasoning",
+        "optimizations",
+        "beginnerAnalogy",
+        "interviewQuestions",
+        "commonMistakes",
+        "keyConcepts",
+      ],
+    },
+  };
+
+  try {
     const response = await ai.models.generateContent({
       model: "gemini-3.6-flash",
       contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            summary: { type: Type.STRING },
-            corePurpose: { type: Type.STRING },
-            lineByLine: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  lineNumber: { type: Type.INTEGER },
-                  code: { type: Type.STRING },
-                  explanation: { type: Type.STRING },
-                  variableChanges: { type: Type.STRING },
-                },
-                required: ["lineNumber", "code", "explanation"],
-              },
-            },
-            timeComplexity: { type: Type.STRING },
-            spaceComplexity: { type: Type.STRING },
-            complexityReasoning: { type: Type.STRING },
-            optimizations: {
-              type: Type.ARRAY,
-              items: { type: Type.STRING },
-            },
-            beginnerAnalogy: { type: Type.STRING },
-            interviewQuestions: {
-              type: Type.ARRAY,
-              items: { type: Type.STRING },
-            },
-            commonMistakes: {
-              type: Type.ARRAY,
-              items: { type: Type.STRING },
-            },
-            keyConcepts: {
-              type: Type.ARRAY,
-              items: { type: Type.STRING },
-            },
-          },
-          required: [
-            "summary",
-            "corePurpose",
-            "lineByLine",
-            "timeComplexity",
-            "spaceComplexity",
-            "complexityReasoning",
-            "optimizations",
-            "beginnerAnalogy",
-            "interviewQuestions",
-            "commonMistakes",
-            "keyConcepts",
-          ],
-        },
-      },
+      config,
     });
 
     const parsed = JSON.parse(cleanJsonText(response.text || "{}"));
-    res.json(parsed);
-  } catch (error: any) {
-    console.error("[Backend API Error] /api/analyze generation or parsing failed:", error);
-    const { code, language } = req.body || {};
-    res.json(generateFallbackAnalysis(code || "", language || "text"));
+    return res.json(parsed);
+  } catch (err: any) {
+    // Attempt fallback model if 429 rate limit or primary model fails
+    try {
+      const fallbackRes = await ai.models.generateContent({
+        model: "gemini-flash-latest",
+        contents: prompt,
+        config,
+      });
+      const parsedFallback = JSON.parse(cleanJsonText(fallbackRes.text || "{}"));
+      return res.json(parsedFallback);
+    } catch (fallbackErr: any) {
+      console.warn("[Gemini API Quota/Rate Limit] Serving rule-based code analysis engine.");
+      return res.json(generateFallbackAnalysis(code, language));
+    }
   }
 });
 
 // 2. Flowchart API (Mermaid.js syntax)
 app.post("/api/flowchart", async (req, res) => {
-  try {
-    const { code, language } = req.body;
-    if (!code) {
-      return res.status(400).json({ error: "Code snippet is required." });
-    }
+  const { code, language } = req.body || {};
+  if (!code) {
+    return res.status(400).json({ error: "Code snippet is required." });
+  }
 
-    const ai = getGenAI();
-    if (!ai) {
-      return res.json(generateFallbackFlowchart(code));
-    }
+  const ai = getGenAI();
+  if (!ai) {
+    return res.json(generateFallbackFlowchart(code));
+  }
 
-    const prompt = `Convert the following ${language || "code"} snippet into a clean, valid Mermaid.js flowchart (graph TD).
+  const prompt = `Convert the following ${language || "code"} snippet into a clean, valid Mermaid.js flowchart (graph TD).
 
 Code:
 \`\`\`
@@ -179,44 +190,56 @@ Return a JSON object containing:
   4. Keep the graph clean and concise with at most 8-10 nodes.
 - explanation: A short 2-sentence description of the workflow.`;
 
+  const config = {
+    responseMimeType: "application/json",
+    responseSchema: {
+      type: Type.OBJECT,
+      properties: {
+        mermaidCode: { type: Type.STRING },
+        explanation: { type: Type.STRING },
+      },
+      required: ["mermaidCode", "explanation"],
+    },
+  };
+
+  try {
     const response = await ai.models.generateContent({
       model: "gemini-3.6-flash",
       contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            mermaidCode: { type: Type.STRING },
-            explanation: { type: Type.STRING },
-          },
-          required: ["mermaidCode", "explanation"],
-        },
-      },
+      config,
     });
 
     const parsed = JSON.parse(cleanJsonText(response.text || "{}"));
-    res.json(parsed);
-  } catch (error) {
-    console.error("[Backend API Error] /api/flowchart generation or parsing failed:", error);
-    res.json(generateFallbackFlowchart(req.body.code || ""));
+    return res.json(parsed);
+  } catch (err) {
+    try {
+      const fallbackRes = await ai.models.generateContent({
+        model: "gemini-flash-latest",
+        contents: prompt,
+        config,
+      });
+      const parsedFallback = JSON.parse(cleanJsonText(fallbackRes.text || "{}"));
+      return res.json(parsedFallback);
+    } catch (fallbackErr) {
+      console.warn("[Gemini API Quota/Rate Limit] Serving rule-based flowchart generator.");
+      return res.json(generateFallbackFlowchart(code));
+    }
   }
 });
 
 // 3. Dry Run Simulation Trace API
 app.post("/api/dryrun", async (req, res) => {
-  try {
-    const { code, language } = req.body;
-    if (!code) {
-      return res.status(400).json({ error: "Code snippet is required." });
-    }
+  const { code, language } = req.body || {};
+  if (!code) {
+    return res.status(400).json({ error: "Code snippet is required." });
+  }
 
-    const ai = getGenAI();
-    if (!ai) {
-      return res.json(generateFallbackDryRun(code));
-    }
+  const ai = getGenAI();
+  if (!ai) {
+    return res.json(generateFallbackDryRun(code));
+  }
 
-    const prompt = `Perform a step-by-step dry run simulation of executing this ${language || "code"} snippet.
+  const prompt = `Perform a step-by-step dry run simulation of executing this ${language || "code"} snippet.
 Trace up to 10 key execution steps. For each step, track the current line number executed, line code content, what happened, the variable state dictionary at that exact step, and any output printed.
 
 Code:
@@ -235,6 +258,7 @@ Return JSON:
   - variables: key-value object of active variables at this moment
   - consoleOutput: optional console print text generated by this line`;
 
+  try {
     const response = await ai.models.generateContent({
       model: "gemini-3.6-flash",
       contents: prompt,
@@ -244,27 +268,38 @@ Return JSON:
     });
 
     const parsed = JSON.parse(cleanJsonText(response.text || "{}"));
-    res.json(parsed);
-  } catch (error) {
-    console.error("[Backend API Error] /api/dryrun generation or parsing failed:", error);
-    res.json(generateFallbackDryRun(req.body.code || ""));
+    return res.json(parsed);
+  } catch (err) {
+    try {
+      const fallbackRes = await ai.models.generateContent({
+        model: "gemini-flash-latest",
+        contents: prompt,
+        config: {
+          responseMimeType: "application/json",
+        },
+      });
+      const parsedFallback = JSON.parse(cleanJsonText(fallbackRes.text || "{}"));
+      return res.json(parsedFallback);
+    } catch (fallbackErr) {
+      console.warn("[Gemini API Quota/Rate Limit] Serving rule-based dry run simulator.");
+      return res.json(generateFallbackDryRun(code));
+    }
   }
 });
 
 // 4. AI Quiz Generator API
 app.post("/api/quiz", async (req, res) => {
-  try {
-    const { code, language } = req.body;
-    if (!code) {
-      return res.status(400).json({ error: "Code snippet is required." });
-    }
+  const { code, language } = req.body || {};
+  if (!code) {
+    return res.status(400).json({ error: "Code snippet is required." });
+  }
 
-    const ai = getGenAI();
-    if (!ai) {
-      return res.json(generateFallbackQuiz(code));
-    }
+  const ai = getGenAI();
+  if (!ai) {
+    return res.json(generateFallbackQuiz(code));
+  }
 
-    const prompt = `Generate a 5-question multiple-choice interactive quiz to test comprehension of this ${language || "code"} snippet.
+  const prompt = `Generate a 5-question multiple-choice interactive quiz to test comprehension of this ${language || "code"} snippet.
 
 Code:
 \`\`\`
@@ -280,60 +315,72 @@ Return JSON:
   - correctAnswerIndex: 0-based index of correct option
   - explanation: thorough explanation why that option is correct`;
 
+  const config = {
+    responseMimeType: "application/json",
+    responseSchema: {
+      type: Type.OBJECT,
+      properties: {
+        title: { type: Type.STRING },
+        questions: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              id: { type: Type.INTEGER },
+              question: { type: Type.STRING },
+              options: {
+                type: Type.ARRAY,
+                items: { type: Type.STRING },
+              },
+              correctAnswerIndex: { type: Type.INTEGER },
+              explanation: { type: Type.STRING },
+            },
+            required: ["id", "question", "options", "correctAnswerIndex", "explanation"],
+          },
+        },
+      },
+      required: ["title", "questions"],
+    },
+  };
+
+  try {
     const response = await ai.models.generateContent({
       model: "gemini-3.6-flash",
       contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            title: { type: Type.STRING },
-            questions: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  id: { type: Type.INTEGER },
-                  question: { type: Type.STRING },
-                  options: {
-                    type: Type.ARRAY,
-                    items: { type: Type.STRING },
-                  },
-                  correctAnswerIndex: { type: Type.INTEGER },
-                  explanation: { type: Type.STRING },
-                },
-                required: ["id", "question", "options", "correctAnswerIndex", "explanation"],
-              },
-            },
-          },
-          required: ["title", "questions"],
-        },
-      },
+      config,
     });
 
     const parsed = JSON.parse(cleanJsonText(response.text || "{}"));
-    res.json(parsed);
-  } catch (error) {
-    console.error("[Backend API Error] /api/quiz generation or parsing failed:", error);
-    res.json(generateFallbackQuiz(req.body.code || ""));
+    return res.json(parsed);
+  } catch (err) {
+    try {
+      const fallbackRes = await ai.models.generateContent({
+        model: "gemini-flash-latest",
+        contents: prompt,
+        config,
+      });
+      const parsedFallback = JSON.parse(cleanJsonText(fallbackRes.text || "{}"));
+      return res.json(parsedFallback);
+    } catch (fallbackErr) {
+      console.warn("[Gemini API Quota/Rate Limit] Serving rule-based quiz generator.");
+      return res.json(generateFallbackQuiz(code));
+    }
   }
 });
 
 // 5. Interview Preparation API
 app.post("/api/interview", async (req, res) => {
-  try {
-    const { code, language } = req.body;
-    if (!code) {
-      return res.status(400).json({ error: "Code snippet is required." });
-    }
+  const { code, language } = req.body || {};
+  if (!code) {
+    return res.status(400).json({ error: "Code snippet is required." });
+  }
 
-    const ai = getGenAI();
-    if (!ai) {
-      return res.json(generateFallbackInterview(code));
-    }
+  const ai = getGenAI();
+  if (!ai) {
+    return res.json(generateFallbackInterview(code));
+  }
 
-    const prompt = `Generate a set of 5 interview questions (Technical, Behavioral/HR, Follow-up, Edge Cases) based on this ${language || "code"}.
+  const prompt = `Generate a set of 5 interview questions (Technical, Behavioral/HR, Follow-up, Edge Cases) based on this ${language || "code"}.
 
 Code:
 \`\`\`
@@ -350,6 +397,7 @@ Return JSON:
   - sampleAnswer: comprehensive model answer
   - keyPointsToMention: array of 3 key points the candidate should articulate`;
 
+  try {
     const response = await ai.models.generateContent({
       model: "gemini-3.6-flash",
       contents: prompt,
@@ -359,27 +407,38 @@ Return JSON:
     });
 
     const parsed = JSON.parse(cleanJsonText(response.text || "{}"));
-    res.json(parsed);
-  } catch (error) {
-    console.error("[Backend API Error] /api/interview generation or parsing failed:", error);
-    res.json(generateFallbackInterview(req.body.code || ""));
+    return res.json(parsed);
+  } catch (err) {
+    try {
+      const fallbackRes = await ai.models.generateContent({
+        model: "gemini-flash-latest",
+        contents: prompt,
+        config: {
+          responseMimeType: "application/json",
+        },
+      });
+      const parsedFallback = JSON.parse(cleanJsonText(fallbackRes.text || "{}"));
+      return res.json(parsedFallback);
+    } catch (fallbackErr) {
+      console.warn("[Gemini API Quota/Rate Limit] Serving rule-based interview prep module.");
+      return res.json(generateFallbackInterview(code));
+    }
   }
 });
 
 // 6. Exam Notes Generator API
 app.post("/api/notes", async (req, res) => {
-  try {
-    const { code, language } = req.body;
-    if (!code) {
-      return res.status(400).json({ error: "Code snippet is required." });
-    }
+  const { code, language } = req.body || {};
+  if (!code) {
+    return res.status(400).json({ error: "Code snippet is required." });
+  }
 
-    const ai = getGenAI();
-    if (!ai) {
-      return res.json(generateFallbackNotes(code));
-    }
+  const ai = getGenAI();
+  if (!ai) {
+    return res.json(generateFallbackNotes(code));
+  }
 
-    const prompt = `Generate structured, exam-ready study notes for this ${language || "code"} implementation.
+  const prompt = `Generate structured, exam-ready study notes for this ${language || "code"} implementation.
 
 Code:
 \`\`\`
@@ -395,6 +454,7 @@ Return JSON:
 - realWorldApplications: string[]
 - cheatSheetSummary: 3 bullet high-yield key takeaways for rapid review`;
 
+  try {
     const response = await ai.models.generateContent({
       model: "gemini-3.6-flash",
       contents: prompt,
@@ -404,10 +464,22 @@ Return JSON:
     });
 
     const parsed = JSON.parse(cleanJsonText(response.text || "{}"));
-    res.json(parsed);
-  } catch (error) {
-    console.error("[Backend API Error] /api/notes generation or parsing failed:", error);
-    res.json(generateFallbackNotes(req.body.code || ""));
+    return res.json(parsed);
+  } catch (err) {
+    try {
+      const fallbackRes = await ai.models.generateContent({
+        model: "gemini-flash-latest",
+        contents: prompt,
+        config: {
+          responseMimeType: "application/json",
+        },
+      });
+      const parsedFallback = JSON.parse(cleanJsonText(fallbackRes.text || "{}"));
+      return res.json(parsedFallback);
+    } catch (fallbackErr) {
+      console.warn("[Gemini API Quota/Rate Limit] Serving rule-based exam notes generator.");
+      return res.json(generateFallbackNotes(code));
+    }
   }
 });
 
