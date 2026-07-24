@@ -122,7 +122,7 @@ export const QuizView: React.FC<QuizViewProps> = ({ quizData, theme = 'dark' }) 
                 }`}>
                   {qIdx + 1}
                 </span>
-                <h4 className={`text-sm font-semibold leading-snug ${
+                <h4 className={`text-base font-semibold leading-relaxed ${
                   isLight ? 'text-slate-900' : 'text-slate-100'
                 }`}>
                   {q.question}
@@ -130,7 +130,7 @@ export const QuizView: React.FC<QuizViewProps> = ({ quizData, theme = 'dark' }) 
               </div>
 
               {/* Options */}
-              <div className="grid grid-cols-1 gap-2.5 pl-9">
+              <div className="grid grid-cols-1 gap-3 pl-9">
                 {q.options.map((opt, optIdx) => {
                   const isSelected = selectedIdx === optIdx;
                   const isCorrect = q.correctAnswerIndex === optIdx;
@@ -164,10 +164,10 @@ export const QuizView: React.FC<QuizViewProps> = ({ quizData, theme = 'dark' }) 
                       key={optIdx}
                       onClick={() => handleSelect(q.id, optIdx)}
                       disabled={showResults}
-                      className={`w-full text-left p-3.5 rounded-xl border text-xs transition-all flex items-center justify-between ${optionStyle}`}
+                      className={`w-full text-left p-3.5 sm:p-4 rounded-xl border text-sm sm:text-[15px] leading-relaxed transition-all flex items-center justify-between ${optionStyle}`}
                     >
                       <div className="flex items-center space-x-3">
-                        <span className={`font-mono w-5 ${isLight ? 'text-slate-500' : 'text-slate-500'}`}>
+                        <span className={`font-mono font-semibold w-5 ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
                           {String.fromCharCode(65 + optIdx)}.
                         </span>
                         <span>{opt}</span>

@@ -20,10 +20,19 @@ export default function App() {
       try {
         return JSON.parse(savedUser);
       } catch {
-        return null;
+        // Fallback
       }
     }
-    return null;
+    // Default active Google session for Thrishal on laptop
+    const defaultUser: GoogleUser = {
+      id: 'google-user-thrishal',
+      name: 'Thrishal Yeggoni',
+      email: 'thrishalyeggoni@gmail.com',
+      picture: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Thrishal%20Yeggoni',
+      signedInAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    };
+    localStorage.setItem('codexray_google_user', JSON.stringify(defaultUser));
+    return defaultUser;
   });
 
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);

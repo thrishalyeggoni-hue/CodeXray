@@ -5,8 +5,13 @@
  */
 
 export interface ApiFetchOptions {
-  code: string;
+  code?: string;
   language?: string;
+  prompt?: string;
+  history?: any;
+  model?: string;
+  enableSearch?: boolean;
+  [key: string]: any;
 }
 
 function logGroupedApiError(

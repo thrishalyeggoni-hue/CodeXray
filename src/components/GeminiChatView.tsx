@@ -25,6 +25,7 @@ import {
   Lightbulb,
 } from 'lucide-react';
 import { GoogleUser } from '../types';
+import { sanitizeLaTeX } from '../utils/sanitize';
 
 interface GeminiChatViewProps {
   onLoadCodeToStudio: (code: string, language?: string) => void;
@@ -417,8 +418,8 @@ def has_cycle(head):
                     <span>{msg.timestamp}</span>
                   </div>
 
-                  <div className="text-sm leading-relaxed font-sans space-y-2">
-                    <Markdown>{msg.text}</Markdown>
+                  <div className="chatgpt-markdown text-sm sm:text-base leading-relaxed font-sans space-y-2">
+                    <Markdown>{sanitizeLaTeX(msg.text)}</Markdown>
                   </div>
 
                   {msg.codeSnippet && (

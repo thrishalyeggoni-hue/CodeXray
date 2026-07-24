@@ -179,9 +179,13 @@ export const Navbar: React.FC<NavbarProps> = ({
                     <button
                       onClick={() => {
                         setShowUserMenu(false);
-                        setCurrentView('dashboard');
+                        if (onLaunchDashboard) {
+                          onLaunchDashboard();
+                        } else {
+                          setCurrentView('dashboard');
+                        }
                       }}
-                      className={`w-full flex items-center space-x-2 px-3 py-1.5 rounded-full text-xs transition-colors ${
+                      className={`w-full flex items-center space-x-2 px-3 py-1.5 rounded-full text-xs transition-colors cursor-pointer ${
                         isLight ? 'hover:bg-slate-100 text-slate-700' : 'hover:bg-white/10 text-slate-300'
                       }`}
                     >

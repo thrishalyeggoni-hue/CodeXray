@@ -19,8 +19,10 @@ import { QuizView } from './QuizView';
 import { InterviewView } from './InterviewView';
 import { NotesView } from './NotesView';
 import { PythonTutorViewer } from './PythonTutorViewer';
-import { AIAssistantsWebView } from './AIAssistantsWebView';
+import { ChatGPTExplainerView } from './ChatGPTExplainerView';
+import { CodeHistoryView } from './CodeHistoryView';
 import { fetchApiWithLogging } from '../services/apiService';
+import { sanitizeLaTeX, sanitizeObjectStrings } from '../utils/sanitize';
 import {
   Sparkles,
   Play,
@@ -65,8 +67,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ initialSampleId, theme = '
 
   // Analysis States
   const [activeTab, setActiveTab] = useState<
-    'geminichat' | 'pythontutor' | 'xray' | 'dryrun' | 'complexity' | 'quiz' | 'interview' | 'notes'
-  >('geminichat');
+    'chatgpt' | 'pythontutor' | 'xray' | 'dryrun' | 'complexity' | 'quiz' | 'interview' | 'notes' | 'history'
+  >('chatgpt');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
 
@@ -76,11 +78,74 @@ export const Dashboard: React.FC<DashboardProps> = ({ initialSampleId, theme = '
   const [quizData, setQuizData] = useState<QuizResponse | null>(null);
   const [interviewData, setInterviewData] = useState<InterviewResponse | null>(null);
   const [notesData, setNotesData] = useState<NotesResponse | null>(null);
+  const [chatgptExplanation, setChatGPTExplanation] = useState<string | null>(null);
 
   // Active line highlight in Monaco editor during dry run
   const [highlightLineNumber, setHighlightLineNumber] = useState<number | undefined>(undefined);
   const [copied, setCopied] = useState(false);
   const [isFocusMode, setIsFocusMode] = useState(false);
+  const [isDryRunGenerating, setIsDryRunGenerating] = useState(false);
+
+  // Monaco Editor References for Active Line Highlighting
+  const editorRef = React.useRef<any>(null);
+  const monacoRef = React.useRef<any>(null);
+  const decorationsRef = React.useRef<string[]>([]);
+
+  const handleEditorDidMount = (editor: any, monaco: any) => {
+    editorRef.current = editor;
+    monacoRef.current = monaco;
+  };
+
+  // Synchronize active dry run line highlight with Monaco editor
+  useEffect(() => {
+    if (editorRef.current && monacoRef.current) {
+      if (highlightLineNumber && highlightLineNumber > 0) {
+        try {
+          editorRef.current.revealLineInCenter(highlightLineNumber);
+          decorationsRef.current = editorRef.current.deltaDecorations(decorationsRef.current, [
+            {
+              range: new monacoRef.current.Range(highlightLineNumber, 1, highlightLineNumber, 1),
+              options: {
+                isWholeLine: true,
+                className: 'active-dryrun-line-highlight',
+                glyphMarginClassName: 'active-dryrun-line-glyph',
+              },
+            },
+          ]);
+        } catch (err) {
+          console.warn('Monaco line highlight error:', err);
+        }
+      } else {
+        decorationsRef.current = editorRef.current.deltaDecorations(decorationsRef.current, []);
+      }
+    }
+  }, [highlightLineNumber]);
+
+  // Single Dry Run Trigger
+  const handleSingleDryRun = async () => {
+    if (!code || !code.trim()) {
+      setAnalysisError('Please enter or select a code snippet first.');
+      return;
+    }
+    setIsDryRunGenerating(true);
+    try {
+      const dryRunRes = await fetchApiWithLogging<DryRunResponse>('/api/dryrun', { code, language });
+      if (dryRunRes) {
+        setDryRunData(dryRunRes);
+      }
+    } catch (err) {
+      console.error('Dry run failed:', err);
+    } finally {
+      setIsDryRunGenerating(false);
+    }
+  };
+
+  // Auto-trigger dry run if switching to dryrun tab with empty dryRunData
+  useEffect(() => {
+    if (activeTab === 'dryrun' && !dryRunData && code && code.trim() && !isDryRunGenerating) {
+      handleSingleDryRun();
+    }
+  }, [activeTab, dryRunData, code]);
 
   // Exit focus mode with Escape key
   useEffect(() => {
@@ -139,19 +204,43 @@ export const Dashboard: React.FC<DashboardProps> = ({ initialSampleId, theme = '
         quizRes,
         interviewRes,
         notesRes,
+        chatRes,
       ] = await Promise.all([
         fetchApiWithLogging<AnalysisResponse>('/api/analyze', { code, language }),
         fetchApiWithLogging<DryRunResponse>('/api/dryrun', { code, language }),
         fetchApiWithLogging<QuizResponse>('/api/quiz', { code, language }),
         fetchApiWithLogging<InterviewResponse>('/api/interview', { code, language }),
         fetchApiWithLogging<NotesResponse>('/api/notes', { code, language }),
+        fetchApiWithLogging<{ answer?: string }>('/api/chat', {
+          prompt: `Please give a complete, clear, step-by-step explanation of the following ${language.toUpperCase()} code for exam study notes. Break down the logic line by line, explain key variables, and note critical algorithmic concepts. CRITICAL FORMATTING INSTRUCTION: Do NOT use LaTeX math symbols, TeX commands, or dollar signs (e.g. do NOT write $9 - 2 = 7$, $i=0$, $O(N)$, \\le). Write all math as clean plain text.`,
+          code,
+          language,
+          history: [],
+        }),
       ]);
 
-      if (analyzeRes) setAnalysisData(analyzeRes);
-      if (dryRunRes) setDryRunData(dryRunRes);
-      if (quizRes) setQuizData(quizRes);
-      if (interviewRes) setInterviewData(interviewRes);
-      if (notesRes) setNotesData(notesRes);
+      if (analyzeRes) setAnalysisData(sanitizeObjectStrings(analyzeRes));
+      if (dryRunRes) setDryRunData(sanitizeObjectStrings(dryRunRes));
+      if (quizRes) setQuizData(sanitizeObjectStrings(quizRes));
+      if (interviewRes) setInterviewData(sanitizeObjectStrings(interviewRes));
+      if (notesRes) setNotesData(sanitizeObjectStrings(notesRes));
+      if (chatRes?.answer) setChatGPTExplanation(sanitizeLaTeX(chatRes.answer));
+
+      // Save item to Code Studio history
+      try {
+        const historyItem = {
+          id: 'hist-' + Date.now(),
+          timestamp: new Date().toLocaleDateString() + ' ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          code,
+          language,
+          title: (analyzeRes as any)?.title || `${language.toUpperCase()} Analysis`,
+          summary: analyzeRes?.summary || 'Analyzed code snippet in CodeXray',
+        };
+        const existingStr = localStorage.getItem('codexray_code_history');
+        const existing = existingStr ? JSON.parse(existingStr) : [];
+        const updated = [historyItem, ...existing.filter((item: any) => item.code !== code)].slice(0, 30);
+        localStorage.setItem('codexray_code_history', JSON.stringify(updated));
+      } catch {}
     } catch (err: any) {
       console.error('Analysis failed:', err);
       setAnalysisError('Failed to analyze code. Please check your network or try again.');
@@ -386,6 +475,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ initialSampleId, theme = '
               language={language === 'cpp' ? 'cpp' : language}
               value={code}
               onChange={(val) => setCode(val || '')}
+              onMount={handleEditorDidMount}
               theme={isLight ? "vs-light" : "vs-dark"}
               options={{
                 fontSize: 13,
@@ -413,19 +503,19 @@ export const Dashboard: React.FC<DashboardProps> = ({ initialSampleId, theme = '
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              onClick={() => setActiveTab('geminichat')}
+              onClick={() => setActiveTab('chatgpt')}
               className={`flex items-center space-x-1.5 px-4 py-2 rounded-full border transition-all whitespace-nowrap font-medium text-xs backdrop-blur-md cursor-pointer ${
-                activeTab === 'geminichat'
-                  ? 'bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white border-purple-400 shadow-sm'
+                activeTab === 'chatgpt'
+                  ? 'bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 text-white border-emerald-400 shadow-sm'
                   : isLight
                     ? 'bg-white/70 text-slate-700 border-slate-300/60 hover:bg-white hover:border-slate-300'
                     : 'bg-white/5 text-slate-300 border-white/10 hover:bg-white/10 hover:border-white/20'
               }`}
             >
-              <Sparkles className="w-3.5 h-3.5 text-cyan-300 animate-pulse" />
-              <span>ChatGPT • Gemini • Claude Web</span>
-              <span className="ml-1 px-1.5 py-0.5 text-[9px] font-semibold rounded-full uppercase bg-cyan-500/20 text-cyan-300 border border-cyan-400/30">
-                AI HUB
+              <Sparkles className="w-3.5 h-3.5 text-emerald-300 animate-pulse" />
+              <span>ChatGPT Code Explainer</span>
+              <span className="ml-1 px-1.5 py-0.5 text-[9px] font-semibold rounded-full uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
+                AI STEP-BY-STEP
               </span>
             </motion.button>
 
@@ -543,6 +633,22 @@ export const Dashboard: React.FC<DashboardProps> = ({ initialSampleId, theme = '
               <BookOpen className="w-3.5 h-3.5 text-cyan-400" />
               <span>Exam Notes</span>
             </motion.button>
+
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setActiveTab('history')}
+              className={`flex items-center space-x-1.5 px-4 py-2 rounded-full border transition-all whitespace-nowrap font-medium text-xs backdrop-blur-md cursor-pointer ${
+                activeTab === 'history'
+                  ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm'
+                  : isLight
+                    ? 'bg-white/70 text-slate-700 border-slate-300/60 hover:bg-white hover:border-slate-300'
+                    : 'bg-white/5 text-slate-300 border-white/10 hover:bg-white/10 hover:border-white/20'
+              }`}
+            >
+              <Clock className="w-3.5 h-3.5 text-amber-400" />
+              <span>Code History</span>
+            </motion.button>
           </div>
 
 
@@ -555,19 +661,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ initialSampleId, theme = '
               </div>
             )}
 
-            {/* TAB 0: MULTI-AI ASSISTANTS WEB HUB */}
-            {activeTab === 'geminichat' && (
-              <AIAssistantsWebView
+            {/* TAB 0: CHATGPT CODE EXPLAINER */}
+            {activeTab === 'chatgpt' && (
+              <ChatGPTExplainerView
                 code={code}
                 language={language}
                 theme={theme}
-                onLoadCodeToStudio={(loadedCode, lang) => {
-                  setCode(loadedCode);
-                  if (lang) {
-                    setLanguage(lang as any);
-                  }
-                  setActiveTab('pythontutor');
-                }}
               />
             )}
 
@@ -693,6 +792,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ initialSampleId, theme = '
               <DryRunPlayer
                 dryRunData={dryRunData}
                 onStepChange={(line) => setHighlightLineNumber(line)}
+                onRunDryRun={handleSingleDryRun}
+                isGenerating={isDryRunGenerating}
                 theme={theme}
               />
             )}
@@ -726,8 +827,28 @@ export const Dashboard: React.FC<DashboardProps> = ({ initialSampleId, theme = '
               <NotesView
                 notesData={notesData}
                 dryRunData={dryRunData}
+                analysisData={analysisData}
+                chatgptExplanation={chatgptExplanation}
                 code={code}
                 language={language}
+                theme={theme}
+                onBackToStudio={() => setActiveTab('xray')}
+              />
+            )}
+
+            {/* TAB 8: CODE STUDIO HISTORY */}
+            {activeTab === 'history' && (
+              <CodeHistoryView
+                onLoadCode={(loadedCode, loadedLang) => {
+                  if (loadedLang) setLanguage(loadedLang as ProgrammingLanguage);
+                  setCode(loadedCode);
+                  setActiveTab('xray');
+                }}
+                onExplainWithChatGPT={(loadedCode, loadedLang) => {
+                  if (loadedLang) setLanguage(loadedLang as ProgrammingLanguage);
+                  setCode(loadedCode);
+                  setActiveTab('chatgpt');
+                }}
                 theme={theme}
               />
             )}

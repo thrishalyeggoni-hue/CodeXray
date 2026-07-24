@@ -40,6 +40,52 @@ function cleanJsonText(text: string): string {
   return cleaned.trim();
 }
 
+// Helper to strip LaTeX math symbols, TeX commands, and dollar signs ($...$) into clean plain text
+function sanitizeLaTeX(str: string): string {
+  if (!str || typeof str !== 'string') return str || '';
+  return str
+    .replace(/\\le(q)?/g, '<=')
+    .replace(/\\ge(q)?/g, '>=')
+    .replace(/\\rightarrow/g, '->')
+    .replace(/\\leftarrow/g, '<-')
+    .replace(/\\times/g, 'x')
+    .replace(/\\cdot/g, '*')
+    .replace(/\\log/g, 'log')
+    .replace(/\\dots|\\ldots/g, '...')
+    .replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, '($1)/($2)')
+    .replace(/\\(mathcal|text|mathbf|mathrm)\{([^}]+)\}/g, '$2')
+    .replace(/\$\$([\s\S]*?)\$\$/g, '$1')  // Block math $$ ... $$ -> inner text
+    .replace(/\$([^\$\n]+)\$/g, '$1')      // Inline math $ ... $ -> inner text
+    .replace(/\$/g, '');                   // Strip any leftover orphan dollar signs
+}
+
+function sanitizeObjectStrings<T>(data: T): T {
+  if (data === null || data === undefined) return data;
+  if (typeof data === 'string') {
+    return sanitizeLaTeX(data) as unknown as T;
+  }
+  if (Array.isArray(data)) {
+    return data.map((item) => sanitizeObjectStrings(item)) as unknown as T;
+  }
+  if (typeof data === 'object') {
+    const result: Record<string, any> = {};
+    for (const key of Object.keys(data)) {
+      result[key] = sanitizeObjectStrings((data as Record<string, any>)[key]);
+    }
+    return result as T;
+  }
+  return data;
+}
+
+function logModelFailure(tag: string, model: string, err: any) {
+  const msg = err?.message || String(err);
+  if (msg.includes('429') || msg.includes('RESOURCE_EXHAUSTED') || err?.status === 429) {
+    console.warn(`[${tag}] Model ${model} rate limited (429). Trying fallback...`);
+  } else {
+    console.warn(`[${tag}] Model ${model} error: ${msg.slice(0, 100)}... Trying fallback...`);
+  }
+}
+
 // 1. Core Code Analysis API
 app.post("/api/analyze", async (req, res) => {
   const { code, language } = req.body || {};
@@ -52,12 +98,17 @@ app.post("/api/analyze", async (req, res) => {
     return res.json(generateFallbackAnalysis(code, language));
   }
 
-  const prompt = `Analyze the following ${language || "code"} snippet thoroughly and return a structured JSON response.
+  const prompt = `Analyze the following ${language || "code"} snippet thoroughly with mathematical precision and return a structured JSON response.
 
 Code snippet:
 \`\`\`${language || "text"}
 ${code}
 \`\`\`
+
+CRITICAL MATHEMATICAL ACCURACY RULES:
+1. Determine EXACT Big-O Time Complexity (e.g. O(1), O(log N), O(N), O(N log N), O(N^2), O(N^3), O(2^N), O(N!)). Carefully count loop nesting depth, recursive call tree branching, helper method costs (e.g. .sort() is O(N log N), slice/includes inside a loop makes it O(N^2)).
+2. Determine EXACT Big-O Space Complexity (e.g. O(1) auxiliary, O(N) memory/stack).
+3. Do NOT use LaTeX math dollar signs ($O(N)$ or $\\le$). Use clean plain text Big-O like O(N), O(N^2), O(log N), <=, >=.
 
 Provide:
 1. summary: A high-level 2-sentence explanation of what the code does.
@@ -67,9 +118,9 @@ Provide:
    - code: exact code on that line
    - explanation: clear explanation of what this line does
    - variableChanges: optional string describing variables mutated or initialized on this line
-4. timeComplexity: Big-O time complexity notation (e.g. O(N), O(log N), O(1)).
+4. timeComplexity: Big-O time complexity notation (e.g. O(N), O(N^2), O(log N)).
 5. spaceComplexity: Big-O space complexity notation (e.g. O(1), O(N)).
-6. complexityReasoning: 2-3 sentences explaining why it has this time and space complexity.
+6. complexityReasoning: 2-3 sentences explaining why it has this time and space complexity based on loop nestings, branching, and memory allocations.
 7. optimizations: array of 2-3 specific optimization suggestions or alternative data structures.
 8. beginnerAnalogy: A creative, relatable real-world ELI5 (Explain Like I'm 5) analogy.
 9. interviewQuestions: array of 3 key questions an interviewer might ask about this implementation.
@@ -134,7 +185,7 @@ Provide:
   };
 
   // Multi-model fallback sequence for highest availability
-  const modelsToTry = ["gemini-3.6-flash", "gemini-3.1-pro-preview", "gemini-2.5-pro", "gemini-2.5-flash"];
+  const modelsToTry = ["gemini-3.6-flash", "gemini-3.1-pro-preview", "gemini-flash-latest", "gemini-3.1-flash-lite"];
 
   for (const model of modelsToTry) {
     try {
@@ -147,15 +198,15 @@ Provide:
       const text = response?.text;
       if (text) {
         const parsed = JSON.parse(cleanJsonText(text));
-        return res.json(parsed);
+        return res.json(sanitizeObjectStrings(parsed));
       }
     } catch (err: any) {
-      console.warn(`[Gemini Analyze] Model ${model} failed: ${err?.message || err}. Trying next fallback...`);
+      logModelFailure("Gemini Analyze", model, err);
     }
   }
 
   console.warn("[Gemini API Quota/Rate Limit] Serving rule-based code analysis engine.");
-  return res.json(generateFallbackAnalysis(code, language));
+  return res.json(sanitizeObjectStrings(generateFallbackAnalysis(code, language)));
 });
 
 // 2. Gemini Conversational AI Chat API
@@ -178,13 +229,14 @@ app.post("/api/chat", async (req, res) => {
 
   if (!ai) {
     return res.json({
-      answer: getLocalChatAnswer(prompt, dateFormatted, code, language),
+      answer: sanitizeLaTeX(getLocalChatAnswer(prompt, dateFormatted, code, language)),
     });
   }
 
   const systemInstruction = `You are Google Gemini, a large language model built by Google.
 Today's Date: ${dateFormatted} (${now.toISOString().split("T")[0]}).
 You are helpful, knowledgeable, concise, and direct.
+CRITICAL FORMATTING INSTRUCTION: Do NOT use LaTeX math symbols, TeX commands, or dollar signs (e.g. do NOT write $9 - 2 = 7$, $i=0$, $O(N)$, $\\le$). Write all math expressions, loop variables, index bounds, and equation steps in clean plain text or inline code ticks, e.g. "9 - 2 = 7", "i = 0", "num = 2", "O(N)".
 Provide accurate answers to all queries including general knowledge, current facts, coding tasks, algorithm explanations, and code debugging.
 Format responses with clean Markdown, bold headers, and syntax-highlighted code blocks where appropriate.`;
 
@@ -207,7 +259,7 @@ Format responses with clean Markdown, bold headers, and syntax-highlighted code 
   }
   contents.push({ role: "user", parts: [{ text: currentText }] });
 
-  const modelsToTry = ["gemini-3.6-flash", "gemini-3.1-pro-preview", "gemini-2.5-pro", "gemini-2.5-flash"];
+  const modelsToTry = ["gemini-3.6-flash", "gemini-3.1-pro-preview", "gemini-flash-latest", "gemini-3.1-flash-lite"];
 
   // 1. First attempt with search grounding across models
   if (enableSearch) {
@@ -222,10 +274,10 @@ Format responses with clean Markdown, bold headers, and syntax-highlighted code 
           },
         });
         if (response?.text) {
-          return res.json({ answer: response.text });
+          return res.json({ answer: sanitizeLaTeX(response.text) });
         }
       } catch (err: any) {
-        console.warn(`[Gemini Chat Search Grounding] Model ${model} failed: ${err?.message || err}`);
+        logModelFailure("Gemini Chat Grounded", model, err);
       }
     }
   }
@@ -239,50 +291,55 @@ Format responses with clean Markdown, bold headers, and syntax-highlighted code 
         config: { systemInstruction },
       });
       if (response?.text) {
-        return res.json({ answer: response.text });
+        return res.json({ answer: sanitizeLaTeX(response.text) });
       }
     } catch (err: any) {
-      console.warn(`[Gemini Chat Standard] Model ${model} failed: ${err?.message || err}`);
+      logModelFailure("Gemini Chat Standard", model, err);
     }
   }
 
   // 3. Intelligent fallback if Gemini API free quota is temporarily reached (429)
   return res.json({
-    answer: getLocalChatAnswer(prompt, dateFormatted, code, language),
+    answer: sanitizeLaTeX(getLocalChatAnswer(prompt, dateFormatted, code, language)),
   });
 });
 
 // 3. Dry Run Simulation Trace API
 app.post("/api/dryrun", async (req, res) => {
   const { code, language } = req.body || {};
-  if (!code) {
+  if (!code || !code.trim()) {
     return res.status(400).json({ error: "Code snippet is required." });
   }
 
   const ai = getGenAI();
   if (!ai) {
-    return res.json(generateFallbackDryRun(code));
+    return res.json(generateFallbackDryRun(code, language));
   }
 
-  const prompt = `Perform an accurate step-by-step dry run simulation of executing this ${language || "code"} snippet.
-Trace up to 10 key execution steps sequentially from initialization to return/exit.
-For each step, track the current line number executed, line code content, what evaluated, the EXACT local variables in memory at that step, and any console stdout printed on that specific line.
+  const prompt = `You are a high-precision code execution tracer & dry run engine.
+Perform an accurate, step-by-step dry run simulation of executing this ${language || "code"} snippet.
+Trace between 8 to 20 key execution steps sequentially from initialization to return/exit.
 
-Code:
-\`\`\`
+For EACH step:
+1. Identify the EXACT 1-based line number currently executed in the snippet.
+2. Provide lineContent (the exact code on that line).
+3. Provide a clear, educational explanation of what evaluates or mutates on this line.
+4. Provide variables: a JSON key-value map of ALL active local variables in scope at this exact step.
+   IMPORTANT for arrays and pointers:
+   - If there is an array, formatted as JSON string or array, e.g., "arr": "[2, 5, 8, 12, 16, 23, 38]" or [2, 5, 8, 12, 16].
+   - Numerical index variables like "low", "high", "mid", "i", "j", "head", "tail" MUST have integer values so the UI pointer visualizer can animate pointer arrows pointing directly to array indices!
+   - Include comparison or condition outcomes where applicable (e.g., "arr[mid] == target" => "8 < 12 (true)").
+5. Provide consoleOutput: string ONLY if this specific step printed output to stdout (e.g., System.out.println / console.log / print). Otherwise leave empty or omit.
+
+Code snippet:
+\`\`\`${language || "text"}
 ${code}
 \`\`\`
 
-Return JSON:
+Return valid JSON with:
 - totalSteps: total number of execution steps
-- finalOutput: overall final return value or output yielded at program completion (e.g., "Returned index 3" or "3")
-- steps: array of objects:
-  - stepNumber: integer starting at 1
-  - lineNumber: 1-based line number of executed code
-  - lineContent: exact source code line
-  - explanation: step explanation describing memory changes or condition evaluations
-  - variables: object map of active variables in scope with their exact values at this step (e.g. {"low": 0, "high": 6, "mid": 3, "arr[mid]": 7})
-  - consoleOutput: string ONLY if this specific step printed to stdout; otherwise omit or leave empty. DO NOT place final completion output on early steps!`;
+- finalOutput: concise final return value or terminal output yielded at program completion (e.g. "Returned index 3" or "3")
+- steps: array of objects as described above.`;
 
   const config = {
     responseMimeType: "application/json",
@@ -311,7 +368,7 @@ Return JSON:
     },
   };
 
-  const modelsToTry = ["gemini-3.6-flash", "gemini-3.1-pro-preview", "gemini-2.5-pro", "gemini-2.5-flash"];
+  const modelsToTry = ["gemini-3.6-flash", "gemini-3.1-pro-preview", "gemini-flash-latest", "gemini-3.1-flash-lite"];
 
   for (const model of modelsToTry) {
     try {
@@ -324,15 +381,15 @@ Return JSON:
       const text = response?.text;
       if (text) {
         const parsed = JSON.parse(cleanJsonText(text));
-        return res.json(parsed);
+        return res.json(sanitizeObjectStrings(parsed));
       }
     } catch (err: any) {
-      console.warn(`[Gemini DryRun] Model ${model} failed: ${err?.message || err}. Trying next...`);
+      logModelFailure("Gemini DryRun", model, err);
     }
   }
 
   console.warn("[Gemini API Quota/Rate Limit] Serving rule-based dry run simulator.");
-  return res.json(generateFallbackDryRun(code));
+  return res.json(sanitizeObjectStrings(generateFallbackDryRun(code, language)));
 });
 
 // 4. AI Quiz Generator API
@@ -344,10 +401,11 @@ app.post("/api/quiz", async (req, res) => {
 
   const ai = getGenAI();
   if (!ai) {
-    return res.json(generateFallbackQuiz(code));
+    return res.json(sanitizeObjectStrings(generateFallbackQuiz(code)));
   }
 
   const prompt = `Generate a 5-question multiple-choice interactive quiz to test comprehension of this ${language || "code"} snippet.
+CRITICAL FORMATTING INSTRUCTION: Do NOT use LaTeX math symbols, TeX commands, or dollar signs (e.g. do NOT write $9 - 2 = 7$, $i=0$, $O(N)$, \\le). Write all math as clean plain text.
 
 Code:
 \`\`\`
@@ -391,7 +449,7 @@ Return JSON:
     },
   };
 
-  const modelsToTry = ["gemini-3.6-flash", "gemini-3.1-pro-preview", "gemini-2.5-pro", "gemini-2.5-flash"];
+  const modelsToTry = ["gemini-3.6-flash", "gemini-3.1-pro-preview", "gemini-flash-latest", "gemini-3.1-flash-lite"];
 
   for (const model of modelsToTry) {
     try {
@@ -404,15 +462,15 @@ Return JSON:
       const text = response?.text;
       if (text) {
         const parsed = JSON.parse(cleanJsonText(text));
-        return res.json(parsed);
+        return res.json(sanitizeObjectStrings(parsed));
       }
     } catch (err: any) {
-      console.warn(`[Gemini Quiz] Model ${model} failed: ${err?.message || err}. Trying next...`);
+      logModelFailure("Gemini Quiz", model, err);
     }
   }
 
   console.warn("[Gemini API Quota/Rate Limit] Serving rule-based quiz generator.");
-  return res.json(generateFallbackQuiz(code));
+  return res.json(sanitizeObjectStrings(generateFallbackQuiz(code)));
 });
 
 // 5. Interview Preparation API
@@ -424,10 +482,11 @@ app.post("/api/interview", async (req, res) => {
 
   const ai = getGenAI();
   if (!ai) {
-    return res.json(generateFallbackInterview(code));
+    return res.json(sanitizeObjectStrings(generateFallbackInterview(code)));
   }
 
   const prompt = `Generate a set of 5 interview questions (Technical, Behavioral/HR, Follow-up, Edge Cases) based on this ${language || "code"}.
+CRITICAL FORMATTING INSTRUCTION: Do NOT use LaTeX math symbols, TeX commands, or dollar signs (e.g. do NOT write $9 - 2 = 7$, $i=0$, $O(N)$, \\le). Write all math as clean plain text.
 
 Code:
 \`\`\`
@@ -448,7 +507,7 @@ Return JSON:
     responseMimeType: "application/json",
   };
 
-  const modelsToTry = ["gemini-3.6-flash", "gemini-3.1-pro-preview", "gemini-2.5-pro", "gemini-2.5-flash"];
+  const modelsToTry = ["gemini-3.6-flash", "gemini-3.1-pro-preview", "gemini-flash-latest", "gemini-3.1-flash-lite"];
 
   for (const model of modelsToTry) {
     try {
@@ -461,15 +520,15 @@ Return JSON:
       const text = response?.text;
       if (text) {
         const parsed = JSON.parse(cleanJsonText(text));
-        return res.json(parsed);
+        return res.json(sanitizeObjectStrings(parsed));
       }
     } catch (err: any) {
-      console.warn(`[Gemini Interview] Model ${model} failed: ${err?.message || err}. Trying next...`);
+      logModelFailure("Gemini Interview", model, err);
     }
   }
 
   console.warn("[Gemini API Quota/Rate Limit] Serving rule-based interview prep module.");
-  return res.json(generateFallbackInterview(code));
+  return res.json(sanitizeObjectStrings(generateFallbackInterview(code)));
 });
 
 // 6. Exam Notes Generator API
@@ -481,10 +540,11 @@ app.post("/api/notes", async (req, res) => {
 
   const ai = getGenAI();
   if (!ai) {
-    return res.json(generateFallbackNotes(code));
+    return res.json(sanitizeObjectStrings(generateFallbackNotes(code)));
   }
 
   const prompt = `Generate structured, exam-ready study notes for this ${language || "code"} implementation.
+CRITICAL FORMATTING INSTRUCTION: Do NOT use LaTeX math symbols, TeX commands, or dollar signs (e.g. do NOT write $9 - 2 = 7$, $i=0$, $O(N)$, \\le). Write all math expressions, equation steps, and variables as clean plain text or inline code ticks (e.g. "9 - 2 = 7", "i = 0", "O(N)", "<=").
 
 Code:
 \`\`\`
@@ -504,7 +564,7 @@ Return JSON:
     responseMimeType: "application/json",
   };
 
-  const modelsToTry = ["gemini-3.6-flash", "gemini-3.1-pro-preview", "gemini-2.5-pro", "gemini-2.5-flash"];
+  const modelsToTry = ["gemini-3.6-flash", "gemini-3.1-pro-preview", "gemini-flash-latest", "gemini-3.1-flash-lite"];
 
   for (const model of modelsToTry) {
     try {
@@ -517,16 +577,151 @@ Return JSON:
       const text = response?.text;
       if (text) {
         const parsed = JSON.parse(cleanJsonText(text));
-        return res.json(parsed);
+        return res.json(sanitizeObjectStrings(parsed));
       }
     } catch (err: any) {
-      console.warn(`[Gemini Notes] Model ${model} failed: ${err?.message || err}. Trying next...`);
+      logModelFailure("Gemini Notes", model, err);
     }
   }
 
   console.warn("[Gemini API Quota/Rate Limit] Serving rule-based exam notes generator.");
-  return res.json(generateFallbackNotes(code));
+  return res.json(sanitizeObjectStrings(generateFallbackNotes(code)));
 });
+
+// Helper for static code analysis & mathematical Big-O determination
+function computeAccurateComplexity(code: string) {
+  const lower = code.toLowerCase();
+
+  // 1. Check for sorting calls
+  const containsSort =
+    lower.includes('.sort(') ||
+    lower.includes('arrays.sort') ||
+    lower.includes('collections.sort') ||
+    lower.includes('std::sort') ||
+    lower.includes('qsort');
+
+  // 2. Count loop depth & logarithmic behavior
+  const lines = code.split('\n');
+  let maxLoopDepth = 0;
+  let currentLoopDepth = 0;
+  let isLogarithmic = false;
+
+  for (const l of lines) {
+    const trimmed = l.trim().toLowerCase();
+    if (trimmed.startsWith('//') || trimmed.startsWith('/*')) continue;
+
+    if (
+      trimmed.includes('for ') ||
+      trimmed.includes('for(') ||
+      trimmed.includes('while ') ||
+      trimmed.includes('while(') ||
+      trimmed.includes('.foreach') ||
+      trimmed.includes('.map(')
+    ) {
+      currentLoopDepth++;
+      if (currentLoopDepth > maxLoopDepth) maxLoopDepth = currentLoopDepth;
+
+      if (
+        trimmed.includes('/=') ||
+        trimmed.includes('*=') ||
+        trimmed.includes('>>=') ||
+        trimmed.includes('mid') ||
+        trimmed.includes('/ 2') ||
+        trimmed.includes('/2')
+      ) {
+        isLogarithmic = true;
+      }
+    }
+
+    if (trimmed.includes('}')) {
+      if (currentLoopDepth > 0) currentLoopDepth--;
+    }
+  }
+
+  // 3. Check recursion
+  let isRecursive = false;
+  let recursiveBranching = false;
+  const fnMatch = code.match(
+    /(?:function|def|int|void|double|string|const|let)\s+([a-zA-Z0-9_]+)\s*[\(=]/i
+  );
+  if (fnMatch) {
+    const fnName = fnMatch[1];
+    if (fnName && fnName.length > 1) {
+      const regex = new RegExp(`\\b${fnName}\\b`, 'g');
+      const matches = code.match(regex);
+      if (matches && matches.length >= 2) {
+        isRecursive = true;
+        if (matches.length >= 3) {
+          recursiveBranching = true;
+        }
+      }
+    }
+  }
+
+  let timeComplexity = "O(N)";
+  let spaceComplexity = "O(1)";
+  let complexityReasoning = "Processes input elements sequentially in a single pass.";
+
+  if (recursiveBranching) {
+    timeComplexity = "O(2^N)";
+    spaceComplexity = "O(N)";
+    complexityReasoning =
+      "Binary/multi-branching recursive call tree generates exponential O(2^N) time complexity and recursive call stack depth of O(N).";
+  } else if (isRecursive) {
+    timeComplexity = isLogarithmic ? "O(log N)" : "O(N)";
+    spaceComplexity = "O(N)";
+    complexityReasoning = `Linear recursive function with call stack depth allocation proportional to O(N) input depth executing in ${timeComplexity} time.`;
+  } else if (containsSort) {
+    timeComplexity = "O(N log N)";
+    spaceComplexity = "O(N)";
+    complexityReasoning =
+      "Uses comparison-based sorting requiring O(N log N) average and worst-case time complexity.";
+  } else if (maxLoopDepth >= 3) {
+    timeComplexity = "O(N^3)";
+    spaceComplexity = "O(1)";
+    complexityReasoning =
+      "Contains 3 deeply nested loop iterations resulting in cubic O(N^3) total operation steps.";
+  } else if (maxLoopDepth === 2) {
+    timeComplexity = "O(N^2)";
+    spaceComplexity = "O(1)";
+    complexityReasoning =
+      "Contains nested loop structures resulting in quadratic O(N^2) total comparisons.";
+  } else if (maxLoopDepth === 1) {
+    if (isLogarithmic) {
+      timeComplexity = "O(log N)";
+      spaceComplexity = "O(1)";
+      complexityReasoning =
+        "Loop boundary or pointer halves/doubles in each iteration resulting in logarithmic O(log N) execution time.";
+    } else {
+      timeComplexity = "O(N)";
+      spaceComplexity = "O(1)";
+      complexityReasoning =
+        "Single loop iterates linearly over N elements in O(N) time with O(1) auxiliary space.";
+    }
+  } else {
+    timeComplexity = "O(1)";
+    spaceComplexity = "O(1)";
+    complexityReasoning =
+      "Executes direct sequential instructions with no loops or variable iterations in constant O(1) time.";
+  }
+
+  if (
+    lower.includes('new array') ||
+    lower.includes('new int[') ||
+    lower.includes('new map') ||
+    lower.includes('new set') ||
+    lower.includes('vector<') ||
+    lower.includes('.push(') ||
+    lower.includes('[]')
+  ) {
+    if (spaceComplexity === "O(1)" && timeComplexity !== "O(1)") {
+      spaceComplexity = "O(N)";
+      complexityReasoning += " Data structures allocate additional proportional O(N) auxiliary memory.";
+    }
+  }
+
+  return { timeComplexity, spaceComplexity, complexityReasoning };
+}
 
 // Fallback Generators (so app works seamlessly even without API key or network glitch)
 function generateFallbackAnalysis(code: string, language: string) {
@@ -535,52 +730,146 @@ function generateFallbackAnalysis(code: string, language: string) {
     lineNumber: idx + 1,
     code: line,
     explanation: line.trim()
-      ? `Executes: ${line.trim().slice(0, 50)}...`
-      : "Blank line for code readability.",
-    variableChanges: line.includes("=") ? "Mutates variable state" : undefined,
+      ? `Statement: ${line.trim().slice(0, 60)}`
+      : "Blank line for structure.",
+    variableChanges: line.includes("=") ? "Mutates scope variable" : undefined,
   }));
 
+  const staticComplexity = computeAccurateComplexity(code);
+
   return {
-    summary: `This ${language || "code"} snippet implements core logical operations involving conditionals, loop iteration, or function execution.`,
-    corePurpose: "Executes a fundamental algorithmic task with step-by-step data transformation.",
+    summary: `This ${language || "code"} snippet processes input structures using statement execution and conditional logic.`,
+    corePurpose: "Executes an algorithmic task transforming state step by step.",
     lineByLine,
-    timeComplexity: "O(N)",
-    spaceComplexity: "O(1)",
-    complexityReasoning: "Processes input items in sequential steps with fixed secondary storage allocation.",
+    timeComplexity: staticComplexity.timeComplexity,
+    spaceComplexity: staticComplexity.spaceComplexity,
+    complexityReasoning: staticComplexity.complexityReasoning,
     optimizations: [
-      "Use hash-based lookups for O(1) membership checks.",
-      "Consider early termination or pruning conditions in loops.",
-      "Minimize redundant allocations inside hot execution paths.",
+      "Use hash-based sets or maps for O(1) average lookup performance.",
+      "Incorporate early break or return statements when target condition is satisfied.",
+      "Avoid redundant allocations inside hot loop execution paths.",
     ],
-    beginnerAnalogy: "Like reading a recipe line by line, keeping track of ingredients on a notepad until the dish is ready.",
+    beginnerAnalogy: "Like reading a step-by-step recipe, updating your counter at each step until complete.",
     interviewQuestions: [
-      "How would you adapt this code to handle negative or null inputs?",
-      "Can this be optimized for better space or time complexity?",
-      "What edge cases would you write unit tests for?",
+      `What is the exact time complexity of this code and why is it ${staticComplexity.timeComplexity}?`,
+      "How would you optimize the memory consumption of this implementation?",
+      "What edge cases (e.g. empty inputs, nulls, negative numbers) should be tested?",
     ],
     commonMistakes: [
-      "Off-by-one errors in loop boundaries.",
-      "Unchecked null/undefined references.",
-      "Missing base cases or exit conditions.",
+      "Off-by-one errors at loop boundary conditions.",
+      "Unchecked null or undefined variables.",
+      "Missing return values or termination checks.",
     ],
-    keyConcepts: ["Loop Control", "Conditional Logic", "Data Manipulation", "Algorithmic Complexity"],
+    keyConcepts: ["Control Flow", "Algorithmic Complexity", "Variable Scope", "Data Structures"],
   };
 }
 
-function generateFallbackDryRun(code: string) {
-  const lines = code.split("\n").filter((l) => l.trim().length > 0);
-  const steps = lines.slice(0, 6).map((line, idx) => ({
-    stepNumber: idx + 1,
-    lineNumber: idx + 1,
-    lineContent: line.trim(),
-    explanation: `Executing statement ${idx + 1}: ${line.trim()}`,
-    variables: { step: idx + 1, state: "Active", index: idx },
-    consoleOutput: idx === lines.slice(0, 6).length - 1 ? "Program finished successfully." : undefined,
-  }));
+function generateFallbackDryRun(code: string, language?: string) {
+  const rawLines = code.split("\n");
+  const validLines: Array<{ lineNumber: number; content: string }> = [];
+
+  rawLines.forEach((l, idx) => {
+    const trimmed = l.trim();
+    if (trimmed && !trimmed.startsWith("//") && !trimmed.startsWith("/*") && !trimmed.startsWith("*")) {
+      validLines.push({ lineNumber: idx + 1, content: trimmed });
+    }
+  });
+
+  if (validLines.length === 0) {
+    validLines.push({ lineNumber: 1, content: code.trim() || "// Execution line" });
+  }
+
+  // Extract variables declared in the user's snippet
+  const activeVars: Record<string, any> = {};
+  
+  // Try finding array declarations in code
+  const arrayMatch = code.match(/(?:let|const|var|int\[\]|vector<int>)\s+([a-zA-Z0-9_]+)\s*=\s*[\{\[](.*?)[\}\]]/);
+  let arrayVar = "arr";
+  let arrayElements = [2, 5, 8, 12, 16, 23, 38];
+  if (arrayMatch) {
+    arrayVar = arrayMatch[1];
+    const rawItems = arrayMatch[2].split(",").map((s) => s.trim()).filter(Boolean);
+    const parsedNums = rawItems.map((n) => Number(n)).filter((n) => !isNaN(n));
+    if (parsedNums.length > 0) {
+      arrayElements = parsedNums;
+    }
+  }
+  activeVars[arrayVar] = JSON.stringify(arrayElements);
+
+  // Extract primitive variables e.g. let sum = 0, target = 12
+  const varMatches = code.matchAll(/(?:let|const|var|int|double|float)\s+([a-zA-Z0-9_]+)\s*=\s*([^;,\)\}\n]+)/g);
+  for (const match of varMatches) {
+    const name = match[1];
+    const rawVal = match[2].trim();
+    if (name && name !== arrayVar && !isNaN(Number(rawVal))) {
+      activeVars[name] = Number(rawVal);
+    } else if (name && name !== arrayVar) {
+      activeVars[name] = rawVal;
+    }
+  }
+
+  const steps: Array<{
+    stepNumber: number;
+    lineNumber: number;
+    lineContent: string;
+    explanation: string;
+    variables: Record<string, any>;
+    consoleOutput?: string;
+  }> = [];
+
+  let stepCount = 1;
+
+  // Step 1: Program entry on line 1
+  const line1 = validLines[0];
+  steps.push({
+    stepNumber: stepCount++,
+    lineNumber: line1.lineNumber,
+    lineContent: line1.content,
+    explanation: `Program entry: Initializing execution frame and scope environment.`,
+    variables: { ...activeVars },
+  });
+
+  // Step through lines 2..N sequentially
+  validLines.forEach((item, idx) => {
+    if (idx === 0) return; // already done line 1
+
+    const text = item.content;
+    const currentVars = { ...activeVars };
+
+    let explanation = `Executing line ${item.lineNumber}: ${text}`;
+    let consoleOutput: string | undefined = undefined;
+
+    if (text.includes("print") || text.includes("console.log") || text.includes("System.out.println")) {
+      consoleOutput = `> Printed line output at line ${item.lineNumber}`;
+      explanation = `Standard Output: Evaluating print expression and sending output to stdout.`;
+    } else if (text.includes("for") || text.includes("while")) {
+      explanation = `Loop Header: Checking loop iteration condition on line ${item.lineNumber}.`;
+      currentVars["i"] = currentVars["i"] !== undefined ? Number(currentVars["i"]) + 1 : 0;
+    } else if (text.includes("if")) {
+      explanation = `Conditional Evaluation: Checking branch condition expression on line ${item.lineNumber}.`;
+    } else if (text.includes("return")) {
+      explanation = `Return Statement: Yielding control and returning result from function on line ${item.lineNumber}.`;
+      currentVars["status"] = "TERMINATED";
+    } else if (text.includes("=")) {
+      explanation = `State Mutation: Assigning variable value on line ${item.lineNumber}.`;
+    }
+
+    steps.push({
+      stepNumber: stepCount++,
+      lineNumber: item.lineNumber,
+      lineContent: item.content,
+      explanation,
+      variables: currentVars,
+      consoleOutput,
+    });
+  });
+
+  const lastLine = validLines[validLines.length - 1] || line1;
+  const finalOutputStr = `Finished executing ${validLines.length} statements cleanly.`;
 
   return {
     totalSteps: steps.length,
-    finalOutput: "Execution completed successfully.",
+    finalOutput: finalOutputStr,
     steps,
   };
 }

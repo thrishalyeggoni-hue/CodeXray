@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { X, ShieldCheck, CheckCircle2, UserCheck, Sparkles } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, ShieldCheck, CheckCircle2, UserCheck, Sparkles, Plus, Trash2, Laptop } from 'lucide-react';
 import { GoogleUser } from '../types';
 
 interface GoogleAuthModalProps {
@@ -23,30 +23,44 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({
   const [isCustomMode, setIsCustomMode] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Pre-configured accounts list for seamless account selection
-  const accountsList = [
-    {
-      name: 'Thrishal Yeggoni',
-      email: defaultEmail,
-      avatar: 'TY',
-      badge: 'Active Google Session',
-      color: 'bg-indigo-600',
-    },
-    {
-      name: 'Thrishal Yeggoni (Dev)',
-      email: 'thrishal.developer@gmail.com',
-      avatar: 'TD',
-      badge: 'Developer Workspace',
-      color: 'bg-emerald-600',
-    },
-  ];
+  // Saved accounts list stored in localStorage for laptop sessions
+  const [savedAccounts, setSavedAccounts] = useState<
+    Array<{ name: string; email: string; avatar: string; color: string; isDeviceActive?: boolean }>
+  >(() => {
+    try {
+      const stored = localStorage.getItem('codexray_saved_google_accounts');
+      if (stored) {
+        return JSON.parse(stored);
+      }
+    } catch {}
+    return [
+      {
+        name: 'Thrishal Yeggoni',
+        email: defaultEmail,
+        avatar: 'TY',
+        color: 'bg-indigo-600',
+        isDeviceActive: true,
+      },
+      {
+        name: 'Thrishal Yeggoni (Dev)',
+        email: 'thrishal.developer@gmail.com',
+        avatar: 'TD',
+        color: 'bg-emerald-600',
+      },
+    ];
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('codexray_saved_google_accounts', JSON.stringify(savedAccounts));
+    } catch {}
+  }, [savedAccounts]);
 
   if (!isOpen) return null;
 
   const handleGoogleSignIn = (name: string, email: string) => {
     setIsLoading(true);
     setTimeout(() => {
-      // Generate avatar or standard Google avatar URL
       const user: GoogleUser = {
         id: 'google-user-' + Date.now(),
         name: name || 'Google User',
@@ -56,10 +70,34 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({
         )}`,
         signedInAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
+
+      // Ensure account is added to saved list if new
+      if (!savedAccounts.some((a) => a.email.toLowerCase() === email.toLowerCase())) {
+        const initials = name
+          .split(' ')
+          .map((n) => n[0])
+          .join('')
+          .toUpperCase()
+          .slice(0, 2);
+        const newAcc = {
+          name,
+          email,
+          avatar: initials || 'GU',
+          color: 'bg-purple-600',
+          isDeviceActive: true,
+        };
+        setSavedAccounts((prev) => [newAcc, ...prev]);
+      }
+
       setIsLoading(false);
       onSignInSuccess(user);
       onClose();
     }, 600);
+  };
+
+  const handleRemoveAccount = (email: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSavedAccounts((prev) => prev.filter((a) => a.email !== email));
   };
 
   return (
@@ -95,7 +133,7 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({
                 d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.36 0 3.26 2.61 1.24 6.58l4.04 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
               />
             </svg>
-            <span className="font-bold text-sm tracking-tight">Sign in with Google</span>
+            <span className="font-bold text-sm tracking-tight">Sign in with Google Account</span>
           </div>
 
           <button
@@ -115,21 +153,26 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({
               Welcome to CodeXray AI
             </h3>
             <p className={`text-xs ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>
-              Sign in with your Google account to sync code analysis history, saved Python Tutor traces, and study notes across sessions.
+              Select a Google account signed in on this device to sync code history, ChatGPT explanations, and study notes.
             </p>
           </div>
 
           {!isCustomMode ? (
             <div className="space-y-3 pt-1">
-              <div className={`text-[11px] font-medium tracking-wide uppercase px-1 ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
-                Choose an account
+              <div className="flex items-center justify-between text-[11px] font-medium tracking-wide uppercase px-1">
+                <span className={isLight ? 'text-slate-500' : 'text-slate-400'}>
+                  Accounts on this device ({savedAccounts.length})
+                </span>
+                <span className="text-emerald-500 dark:text-emerald-400 font-bold flex items-center space-x-1 text-[10px]">
+                  <Laptop className="w-3 h-3" />
+                  <span>Laptop Session Detected</span>
+                </span>
               </div>
 
               {/* Dynamic Accounts List */}
-              {accountsList.map((acc, index) => (
-                <button
+              {savedAccounts.map((acc, index) => (
+                <div
                   key={index}
-                  disabled={isLoading}
                   onClick={() => handleGoogleSignIn(acc.name, acc.email)}
                   className={`w-full p-3 rounded-xl border flex items-center justify-between transition-all group cursor-pointer ${
                     isLight
@@ -142,8 +185,15 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({
                       {acc.avatar}
                     </div>
                     <div>
-                      <div className={`text-xs font-bold ${isLight ? 'text-slate-900' : 'text-white'}`}>
-                        {acc.name}
+                      <div className="flex items-center space-x-2">
+                        <span className={`text-xs font-bold ${isLight ? 'text-slate-900' : 'text-white'}`}>
+                          {acc.name}
+                        </span>
+                        {acc.isDeviceActive && (
+                          <span className="px-1.5 py-0.2 text-[9px] font-bold rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                            Active
+                          </span>
+                        )}
                       </div>
                       <div className={`text-[11px] ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
                         {acc.email}
@@ -151,11 +201,22 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({
                     </div>
                   </div>
 
-                  <div className="flex items-center space-x-1 text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 group-hover:translate-x-0.5 transition-transform">
-                    <span>{isLoading ? 'Signing in...' : 'Sign in'}</span>
-                    <UserCheck className="w-3.5 h-3.5" />
+                  <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-1 text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 group-hover:translate-x-0.5 transition-transform">
+                      <span>{isLoading ? 'Signing in...' : 'Sign in'}</span>
+                      <UserCheck className="w-3.5 h-3.5" />
+                    </div>
+                    {savedAccounts.length > 1 && (
+                      <button
+                        onClick={(e) => handleRemoveAccount(acc.email, e)}
+                        className="p-1 rounded text-slate-400 hover:text-rose-400 transition-colors cursor-pointer"
+                        title="Remove account"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                   </div>
-                </button>
+                </div>
               ))}
 
               {/* Add / Custom Account Button */}

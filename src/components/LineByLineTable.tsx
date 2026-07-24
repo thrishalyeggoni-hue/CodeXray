@@ -68,13 +68,13 @@ export const LineByLineTable: React.FC<LineByLineTableProps> = ({
                     </td>
 
                     {/* Explanation & Variable Mutation */}
-                    <td className="py-2.5 px-4 font-sans text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
+                    <td className="py-3 px-4 font-sans text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
                       <div className="flex items-start space-x-2">
                         <ArrowRight className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 mt-0.5 shrink-0" />
                         <span>{line.explanation}</span>
                       </div>
                       {line.variableChanges && (
-                        <div className="mt-1 flex items-center space-x-1.5 text-[10px] text-indigo-800 dark:text-indigo-200 bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 px-2 py-0.5 rounded w-fit font-mono font-medium">
+                        <div className="mt-1.5 flex items-center space-x-1.5 text-xs text-indigo-800 dark:text-indigo-200 bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 px-2.5 py-1 rounded-md w-fit font-mono font-medium">
                           <Zap className="w-3 h-3 text-indigo-600 dark:text-indigo-400 shrink-0" />
                           <span>{line.variableChanges}</span>
                         </div>

@@ -98,17 +98,17 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ interviewData, the
                 <div className="space-y-2 flex-1">
                   <div className="flex items-center space-x-2">
                     <span
-                      className={`px-2.5 py-0.5 text-[10px] font-semibold uppercase rounded-full border ${getCategoryBadge(
+                      className={`px-3 py-1 text-xs font-semibold uppercase rounded-full border ${getCategoryBadge(
                         q.category
                       )}`}
                     >
                       {q.category}
                     </span>
-                    <span className={`text-xs font-mono ${isLight ? 'text-slate-500' : 'text-slate-500'}`}>
+                    <span className={`text-xs font-mono ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
                       Question {idx + 1}
                     </span>
                   </div>
-                  <h4 className={`text-sm font-semibold leading-snug ${
+                  <h4 className={`text-base font-semibold leading-relaxed ${
                     isLight ? 'text-slate-900' : 'text-slate-100'
                   }`}>
                     {q.question}
@@ -128,23 +128,23 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ interviewData, the
 
               {/* Collapsible Answer & Hints Area */}
               {isExpanded && (
-                <div className={`p-5 border-t space-y-4 text-xs ${
+                <div className={`p-5 border-t space-y-4 text-sm ${
                   isLight
                     ? 'bg-slate-50 border-slate-200 text-slate-800'
                     : 'bg-slate-950 border-slate-800 text-slate-300'
                 }`}>
                   {/* Hints */}
                   {q.hints && q.hints.length > 0 && (
-                    <div className={`p-3 rounded-xl border space-y-1.5 ${
+                    <div className={`p-3.5 rounded-xl border space-y-2 ${
                       isLight
                         ? 'bg-amber-50 border-amber-200 text-amber-950'
                         : 'bg-amber-950/30 border-amber-800/40 text-slate-300'
                     }`}>
-                      <div className="flex items-center space-x-1.5 font-semibold text-amber-800 dark:text-amber-300">
+                      <div className="flex items-center space-x-1.5 font-semibold text-amber-800 dark:text-amber-300 text-sm">
                         <Lightbulb className="w-4 h-4 text-amber-600 dark:text-amber-400" />
                         <span>Interview Hints to Keep in Mind</span>
                       </div>
-                      <ul className="list-disc list-inside space-y-1 pl-1">
+                      <ul className="list-disc list-inside space-y-1.5 pl-1 text-sm leading-relaxed">
                         {q.hints.map((hint, hIdx) => (
                           <li key={hIdx}>{hint}</li>
                         ))}
@@ -153,12 +153,12 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ interviewData, the
                   )}
 
                   {/* Sample Answer */}
-                  <div className="space-y-1.5">
-                    <div className="flex items-center space-x-1.5 text-emerald-700 dark:text-emerald-400 font-semibold">
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-1.5 text-emerald-700 dark:text-emerald-400 font-semibold text-sm">
                       <ShieldCheck className="w-4 h-4" />
                       <span>Model Candidate Answer</span>
                     </div>
-                    <p className={`p-3.5 rounded-xl border leading-relaxed ${
+                    <p className={`p-4 rounded-xl border text-sm sm:text-[15px] leading-relaxed ${
                       isLight
                         ? 'bg-white border-slate-200 text-slate-900'
                         : 'bg-slate-900 border-slate-800 text-slate-200'
