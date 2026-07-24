@@ -217,12 +217,16 @@ export const Dashboard: React.FC<DashboardProps> = ({ initialSampleId, theme = '
     if (found) {
       setLanguage(found.language);
       setCode(found.code);
+      handleAnalyze(found.code, found.language);
     }
   };
 
   // Run full analysis across all Gemini endpoints
-  const handleAnalyze = async () => {
-    if (!code || !code.trim()) {
+  const handleAnalyze = async (overrideCode?: string | React.MouseEvent, overrideLang?: string) => {
+    const codeToAnalyze = typeof overrideCode === 'string' ? overrideCode : code;
+    const langToAnalyze = typeof overrideLang === 'string' ? overrideLang : language;
+
+    if (!codeToAnalyze || !codeToAnalyze.trim()) {
       setAnalysisError('Please enter or select a code snippet first.');
       return;
     }
@@ -239,15 +243,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ initialSampleId, theme = '
         notesRes,
         chatRes,
       ] = await Promise.all([
-        fetchApiWithLogging<AnalysisResponse>('/api/analyze', { code, language }),
-        fetchApiWithLogging<DryRunResponse>('/api/dryrun', { code, language }),
-        fetchApiWithLogging<QuizResponse>('/api/quiz', { code, language }),
-        fetchApiWithLogging<InterviewResponse>('/api/interview', { code, language }),
-        fetchApiWithLogging<NotesResponse>('/api/notes', { code, language }),
+        fetchApiWithLogging<AnalysisResponse>('/api/analyze', { code: codeToAnalyze, language: langToAnalyze }),
+        fetchApiWithLogging<DryRunResponse>('/api/dryrun', { code: codeToAnalyze, language: langToAnalyze }),
+        fetchApiWithLogging<QuizResponse>('/api/quiz', { code: codeToAnalyze, language: langToAnalyze }),
+        fetchApiWithLogging<InterviewResponse>('/api/interview', { code: codeToAnalyze, language: langToAnalyze }),
+        fetchApiWithLogging<NotesResponse>('/api/notes', { code: codeToAnalyze, language: langToAnalyze }),
         fetchApiWithLogging<{ answer?: string }>('/api/chat', {
-          prompt: `Please give a complete, clear, step-by-step explanation of the following ${language.toUpperCase()} code for exam study notes. Break down the logic line by line, explain key variables, and note critical algorithmic concepts. CRITICAL FORMATTING INSTRUCTION: Do NOT use LaTeX math symbols, TeX commands, or dollar signs (e.g. do NOT write $9 - 2 = 7$, $i=0$, $O(N)$, \\le). Write all math as clean plain text.`,
-          code,
-          language,
+          prompt: `Please give a complete, clear, step-by-step explanation of the following ${langToAnalyze.toUpperCase()} code for exam study notes. Break down the logic line by line, explain key variables, and note critical algorithmic concepts. CRITICAL FORMATTING INSTRUCTION: Do NOT use LaTeX math symbols, TeX commands, or dollar signs (e.g. do NOT write $9 - 2 = 7$, $i=0$, $O(N)$, \\le). Write all math as clean plain text.`,
+          code: codeToAnalyze,
+          language: langToAnalyze,
           history: [],
         }),
       ]);

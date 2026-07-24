@@ -1079,13 +1079,24 @@ function generateFallbackNotes(code: string) {
 }
 
 function getLocalChatAnswer(prompt: string, dateFormatted: string, code?: string, language?: string): string {
-  const p = prompt.toLowerCase();
+  const p = prompt.toLowerCase().trim();
 
-  if (p.includes("date") || p.includes("today") || p.includes("time") || p.includes("day")) {
+  // ONLY return date if user is explicitly asking for today's date AND no code snippet is attached
+  const isExplicitDateRequest =
+    (p.includes("what is today") ||
+     p.includes("what's today") ||
+     p.includes("current date") ||
+     p.includes("today's date") ||
+     p === "today" ||
+     p === "date" ||
+     p === "what is the date") &&
+    (!code || !code.trim() || p.includes("date"));
+
+  if (isExplicitDateRequest) {
     return `Today's date is **${dateFormatted}**.`;
   }
 
-  if (p.includes("hi") || p.includes("hello") || p.includes("hey") || p.includes("greetings")) {
+  if ((p === "hi" || p === "hello" || p === "hey" || p === "greetings") && (!code || !code.trim())) {
     return `Hello! I am Google Gemini AI Assistant. How can I assist you with your code, algorithms, memory analysis, or interview preparation today?`;
   }
 
