@@ -40,10 +40,82 @@ function cleanJsonText(text: string): string {
   return cleaned.trim();
 }
 
-// Helper to strip LaTeX math symbols, TeX commands, and dollar signs ($...$) into clean plain text
+// Helper to convert markdown table pipe syntax into clean plain-text bullet points
+function convertPipeTablesToText(markdown: string): string {
+  if (!markdown || typeof markdown !== 'string' || !markdown.includes('|')) return markdown;
+
+  const lines = markdown.split('\n');
+  const resultLines: string[] = [];
+  let inCodeBlock = false;
+  let inTable = false;
+  let headers: string[] = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const trimmed = line.trim();
+
+    if (trimmed.startsWith('```')) {
+      inCodeBlock = !inCodeBlock;
+      if (inTable) {
+        inTable = false;
+        headers = [];
+      }
+      resultLines.push(line);
+      continue;
+    }
+
+    if (inCodeBlock) {
+      resultLines.push(line);
+      continue;
+    }
+
+    if (trimmed.startsWith('|') && (trimmed.endsWith('|') || trimmed.includes('|'))) {
+      const rawCells = trimmed.split('|').map(c => c.trim());
+      const cells = rawCells.filter((c, idx, arr) => {
+        if ((idx === 0 || idx === arr.length - 1) && c === '') return false;
+        return true;
+      });
+
+      if (cells.length >= 2) {
+        const isSeparator = cells.every(c => /^[:\-\s]+$/.test(c));
+        if (isSeparator) {
+          inTable = true;
+          continue;
+        }
+
+        if (!inTable) {
+          headers = cells;
+          inTable = true;
+          continue;
+        } else {
+          if (headers.length > 0) {
+            const formattedCells = cells.map((cell, idx) => {
+              const header = headers[idx] || `Step ${idx + 1}`;
+              return `**${header}**: ${cell}`;
+            }).join('  •  ');
+            resultLines.push(`- ${formattedCells}`);
+          } else {
+            resultLines.push(`- ${cells.join('  •  ')}`);
+          }
+          continue;
+        }
+      }
+    }
+
+    if (inTable) {
+      inTable = false;
+      headers = [];
+    }
+    resultLines.push(line);
+  }
+
+  return resultLines.join('\n');
+}
+
+// Helper to strip LaTeX math symbols, TeX commands, dollar signs ($...$), and table pipes (|) into clean plain text
 function sanitizeLaTeX(str: string): string {
   if (!str || typeof str !== 'string') return str || '';
-  return str
+  const cleanedMath = str
     .replace(/\\le(q)?/g, '<=')
     .replace(/\\ge(q)?/g, '>=')
     .replace(/\\rightarrow/g, '->')
@@ -53,10 +125,12 @@ function sanitizeLaTeX(str: string): string {
     .replace(/\\log/g, 'log')
     .replace(/\\dots|\\ldots/g, '...')
     .replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, '($1)/($2)')
-    .replace(/\\(mathcal|text|mathbf|mathrm)\{([^}]+)\}/g, '$2')
+    .replace(/\\(mathcal|text|mathbf|rm|mathrm)\{([^}]+)\}/g, '$2')
     .replace(/\$\$([\s\S]*?)\$\$/g, '$1')  // Block math $$ ... $$ -> inner text
     .replace(/\$([^\$\n]+)\$/g, '$1')      // Inline math $ ... $ -> inner text
     .replace(/\$/g, '');                   // Strip any leftover orphan dollar signs
+
+  return convertPipeTablesToText(cleanedMath);
 }
 
 function sanitizeObjectStrings<T>(data: T): T {
@@ -233,12 +307,23 @@ app.post("/api/chat", async (req, res) => {
     });
   }
 
-  const systemInstruction = `You are Google Gemini, a large language model built by Google.
+  const systemInstruction = `You are Google Gemini, an expert Computer Science educator and AI Coding Assistant.
 Today's Date: ${dateFormatted} (${now.toISOString().split("T")[0]}).
-You are helpful, knowledgeable, concise, and direct.
-CRITICAL FORMATTING INSTRUCTION: Do NOT use LaTeX math symbols, TeX commands, or dollar signs (e.g. do NOT write $9 - 2 = 7$, $i=0$, $O(N)$, $\\le$). Write all math expressions, loop variables, index bounds, and equation steps in clean plain text or inline code ticks, e.g. "9 - 2 = 7", "i = 0", "num = 2", "O(N)".
-Provide accurate answers to all queries including general knowledge, current facts, coding tasks, algorithm explanations, and code debugging.
-Format responses with clean Markdown, bold headers, and syntax-highlighted code blocks where appropriate.`;
+
+YOUR GOAL: Help the user COMPLETELY AND EFFORTLESSLY understand any code snippet, regardless of the programming language (Python, C++, Java, JavaScript, TypeScript, Go, Rust, C#, SQL, C, Assembly, etc.).
+
+RESPONSE STRUCTURE:
+1. 💡 **High-Level Concept & Purpose**: 2-3 sentences explaining what this code does in simple plain English and why it works.
+2. 🔄 **Execution Control Flowchart**: Provide a clean ASCII flowchart/diagram showing the program flow step by step (e.g. Start ➔ Setup ➔ Loop/Conditions ➔ Return/End). Use standard text characters (e.g. ┌──┐, │, ▼, ➔, ├─►).
+3. 🔍 **Line-by-Line Execution Breakdown**: Walk through key lines or blocks. Explain WHAT each line does, WHY it is necessary, and HOW variables change.
+4. 📊 **Key Variables & Memory State**: Clearly list variables, array pointers, or stack states and how they evolve.
+5. ⚡ **Time & Space Complexity**: Mathematical Big-O bounds with plain reasoning.
+6. 🐛 **Edge Cases & Practical Tips**: List empty inputs, boundary cases, or performance considerations.
+
+CRITICAL FORMATTING RULES:
+- Do NOT use LaTeX math symbols, TeX commands, or dollar signs (e.g. write "O(N)", "i = 0", "low <= high", NOT $O(N)$ or $i=0$).
+- Do NOT wrap every section in excessive nested boxes. Use clean Markdown typography (headers ###, bullet points, bold text, code blocks).
+- Make language-specific details (e.g. pointers in C++, lists vs tuples in Python, memory allocation in Rust) clear to anyone.`;
 
   // Build content array with multi-turn conversation history
   const contents: any[] = [];
@@ -1004,21 +1089,78 @@ function getLocalChatAnswer(prompt: string, dateFormatted: string, code?: string
     return `Hello! I am Google Gemini AI Assistant. How can I assist you with your code, algorithms, memory analysis, or interview preparation today?`;
   }
 
-  if (code) {
-    return `### Code Analysis & Guidance (${language || "Code"})
+  if (code && code.trim()) {
+    const lines = code.split("\n");
+    const langUpper = (language || "code").toUpperCase();
+    const staticComplexity = computeAccurateComplexity(code);
 
-Here is a breakdown for your query regarding the provided code:
+    const lineBreakdown = lines
+      .slice(0, 18)
+      .map((l, idx) => {
+        const lineNum = idx + 1;
+        const trimmed = l.trim();
+        if (!trimmed) return null;
+        return `- **Line ${lineNum}** \`${trimmed.slice(0, 55)}\`\n  └─► *Logic*: Executes statement, updating memory state or evaluating conditions.`;
+      })
+      .filter(Boolean)
+      .join("\n");
 
-**Key Takeaways:**
-1. **Algorithm Strategy:** The code implements logic with standard time and memory bounds.
-2. **Execution Flow:** Review variable initializations and boundary conditions carefully.
-3. **Optimization:** Ensure base cases (e.g., empty inputs or null references) are handled gracefully.
+    return `### 💡 High-Level Concept & Purpose
+This ${langUpper} program processes data inputs sequentially, using conditional control flow and variable assignments to compute results step-by-step.
+
+---
+
+### 🔄 Program Execution Control Flowchart
+\`\`\`
+  [Program Entry / Start]
+            │
+            ▼
+ ┌─────────────────────────────┐
+ │ Variable & Memory Setup     │
+ └──────────┬──────────────────┘
+            │
+            ▼
+ ┌─────────────────────────────┐
+ │ Loop / Branch Condition     │◄───┐
+ └──────────┬──────────────────┘    │
+            │                       │
+            ├─► [Condition Met] ────┘
+            │
+            ▼
+   [Condition Terminated]
+            │
+            ▼
+  [Return Yield / Program Exit]
+\`\`\`
+
+---
+
+### 🔍 Step-by-Step Line Breakdown
+
+${lineBreakdown || "- Sequentially executes statements in scope."}
+
+---
+
+### 📊 Key Variables & Memory State
+- **Iteration Counters / Pointers**: Tracks loop bounds and active frame state.
+- **Data Collections / Values**: Holds input parameters and return values in memory.
+
+---
+
+### ⚡ Time & Space Complexity (Big-O)
+- **Time Complexity**: **${staticComplexity.timeComplexity}** — ${staticComplexity.complexityReasoning}
+- **Space Complexity**: **${staticComplexity.spaceComplexity}** — Auxiliary stack frames or allocations during runtime.
+
+---
+
+### 🐛 Edge Cases & Best Practices
+- **Empty / Null Input**: Always validate collection length before executing loops.
+- **Boundary Conditions**: Ensure pointers stay within valid index bounds.
 
 \`\`\`${language || "text"}
 ${code}
 \`\`\`
-
-If you'd like to trace stack frames line-by-line, switch to the **Python Tutor Trace** tab above!`;
+`;
   }
 
   return `### Gemini Assistant Response
@@ -1026,8 +1168,9 @@ If you'd like to trace stack frames line-by-line, switch to the **Python Tutor T
 Regarding your query: **"${prompt}"**
 
 Here is a structured explanation:
-- **Overview:** Always ensure your algorithm handles core invariants and edge cases.
-- **Best Practice:** Maintain clear state updates and minimize redundant operations.
+1. **Algorithmic Strategy**: Ensure base cases and loop termination invariants are strictly defined.
+2. **Memory Overhead**: Prefer constant auxiliary space O(1) unless secondary structures like hash tables are required.
+3. **Execution Safety**: Validate input constraints to prevent null pointer or array index exceptions.
 
 Feel free to paste any code snippet into the left editor to perform dry runs, complexity evaluations, or step-by-step memory frame traces!`;
 }

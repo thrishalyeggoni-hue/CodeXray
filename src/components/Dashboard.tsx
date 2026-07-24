@@ -50,6 +50,8 @@ import {
   FileText,
   Maximize2,
   Minimize2,
+  GripVertical,
+  Type,
 } from 'lucide-react';
 
 interface DashboardProps {
@@ -64,6 +66,37 @@ export const Dashboard: React.FC<DashboardProps> = ({ initialSampleId, theme = '
   const [language, setLanguage] = useState<ProgrammingLanguage>('java');
   const [code, setCode] = useState<string>('');
   const [selectedPreset, setSelectedPreset] = useState<string>('');
+
+  // Workspace Resizable Split Panel States
+  const [splitRatio, setSplitRatio] = useState<number>(42); // 42% left editor, 58% right visualizer
+  const [isDraggingSplit, setIsDraggingSplit] = useState<boolean>(false);
+  const [editorFontSize, setEditorFontSize] = useState<number>(13);
+
+  // Mouse move and mouse up handlers for smooth window resizing
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDraggingSplit) return;
+      const container = document.getElementById('workspace-split-container') || document.getElementById('focus-split-container');
+      if (!container) return;
+      const rect = container.getBoundingClientRect();
+      const offsetX = e.clientX - rect.left;
+      const pct = Math.min(Math.max((offsetX / rect.width) * 100, 20), 80);
+      setSplitRatio(pct);
+    };
+
+    const handleMouseUp = () => {
+      if (isDraggingSplit) setIsDraggingSplit(false);
+    };
+
+    if (isDraggingSplit) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+    }
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDraggingSplit]);
 
   // Analysis States
   const [activeTab, setActiveTab] = useState<
@@ -453,20 +486,74 @@ export const Dashboard: React.FC<DashboardProps> = ({ initialSampleId, theme = '
         </div>
       </div>
 
-      {/* Main Split Content Workspace */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 flex-1 min-h-0 overflow-hidden">
+      {/* Main Split Content Workspace with Interactive Resizable Handle */}
+      <div
+        id="workspace-split-container"
+        className="flex flex-col lg:flex-row gap-0 flex-1 min-h-0 overflow-hidden relative select-none rounded-2xl border border-white/10"
+      >
         {/* Left: Monaco Editor Panel */}
-        <div className={`lg:col-span-5 rounded-xl border flex flex-col overflow-hidden shadow-xl ${
-          isLight ? 'bg-white border-slate-200' : 'bg-[#0d0d0f] border-white/5'
-        }`}>
-          <div className={`px-4 py-2 border-b flex items-center justify-between text-xs font-mono ${
+        <div
+          style={{ width: typeof window !== 'undefined' && window.innerWidth >= 1024 ? `${splitRatio}%` : '100%' }}
+          className={`flex flex-col overflow-hidden shadow-xl transition-all duration-75 min-w-[280px] ${
+            isLight ? 'bg-white border-r border-slate-200' : 'bg-[#0d0d0f] border-r border-white/10'
+          }`}
+        >
+          {/* Editor Header with Split Presets and Font Size Controls */}
+          <div className={`px-3 py-2 border-b flex flex-wrap items-center justify-between gap-2 text-xs font-mono shrink-0 ${
             isLight ? 'bg-slate-50 border-slate-200 text-slate-700' : 'bg-[#0e0e10] border-white/5 text-slate-400'
           }`}>
             <div className="flex items-center space-x-2">
               <Code2 className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-              <span className={`font-semibold ${isLight ? 'text-slate-900' : 'text-slate-200'}`}>Source Editor</span>
+              <span className={`font-semibold ${isLight ? 'text-slate-900' : 'text-slate-200'}`}>Monaco Editor</span>
+              <span className="text-[10px] text-slate-400">({code.split('\n').length} lines)</span>
             </div>
-            <span>{code.split('\n').length} lines</span>
+
+            <div className="flex items-center space-x-2">
+              {/* Quick Split Presets */}
+              <div className="hidden xl:flex items-center space-x-1 text-[10px]">
+                <span className="text-slate-500 font-sans">Resize:</span>
+                {[
+                  { label: '30/70', ratio: 30 },
+                  { label: '40/60', ratio: 40 },
+                  { label: '50/50', ratio: 50 },
+                  { label: '60/40', ratio: 60 },
+                  { label: '70/30', ratio: 70 },
+                ].map((preset) => (
+                  <button
+                    key={preset.label}
+                    onClick={() => setSplitRatio(preset.ratio)}
+                    className={`px-1.5 py-0.5 rounded transition-all font-mono cursor-pointer ${
+                      Math.round(splitRatio) === preset.ratio
+                        ? 'bg-indigo-600 text-white font-bold'
+                        : 'bg-slate-800/50 text-slate-400 hover:text-white'
+                    }`}
+                    title={`Set split view ratio to ${preset.label}`}
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Font Size Adjuster */}
+              <div className="flex items-center space-x-1 bg-slate-800/40 px-1.5 py-0.5 rounded border border-white/5 text-[10px]">
+                <Type className="w-3 h-3 text-cyan-400" />
+                <button
+                  onClick={() => setEditorFontSize(Math.max(11, editorFontSize - 1))}
+                  className="px-1 text-slate-300 hover:text-white font-bold cursor-pointer"
+                  title="Decrease editor font size"
+                >
+                  -
+                </button>
+                <span className="font-mono text-cyan-300">{editorFontSize}px</span>
+                <button
+                  onClick={() => setEditorFontSize(Math.min(22, editorFontSize + 1))}
+                  className="px-1 text-slate-300 hover:text-white font-bold cursor-pointer"
+                  title="Increase editor font size"
+                >
+                  +
+                </button>
+              </div>
+            </div>
           </div>
 
           <div className="flex-1 min-h-[300px] lg:min-h-0 relative">
@@ -478,7 +565,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ initialSampleId, theme = '
               onMount={handleEditorDidMount}
               theme={isLight ? "vs-light" : "vs-dark"}
               options={{
-                fontSize: 13,
+                fontSize: editorFontSize,
                 fontFamily: 'JetBrains Mono, Fira Code, monospace',
                 minimap: { enabled: false },
                 scrollBeyondLastLine: false,
@@ -492,10 +579,28 @@ export const Dashboard: React.FC<DashboardProps> = ({ initialSampleId, theme = '
           </div>
         </div>
 
+        {/* Interactive Resizable Divider Bar (Desktop Dragging) */}
+        <div
+          onMouseDown={(e) => {
+            e.preventDefault();
+            setIsDraggingSplit(true);
+          }}
+          onDoubleClick={() => setSplitRatio(42)}
+          className={`hidden lg:flex w-2.5 hover:w-3 bg-slate-800/80 hover:bg-indigo-500 cursor-col-resize items-center justify-center transition-all z-20 group shrink-0 ${
+            isDraggingSplit ? 'bg-indigo-600 w-3 shadow-lg shadow-indigo-500/50' : ''
+          }`}
+          title="Drag left/right to resize split panels (Double click to reset to 42/58 split)"
+        >
+          <GripVertical className="w-3 h-3 text-slate-400 group-hover:text-white" />
+        </div>
+
         {/* Right: Multi-Tab Intelligence Hub */}
-        <div className={`lg:col-span-7 rounded-2xl border flex flex-col overflow-hidden shadow-xl ${
-          isLight ? 'bg-white/80 border-slate-200/80 backdrop-blur-md' : 'bg-[#0e0e10]/80 border-white/10 backdrop-blur-md'
-        }`}>
+        <div
+          style={{ width: typeof window !== 'undefined' && window.innerWidth >= 1024 ? `${100 - splitRatio}%` : '100%' }}
+          className={`flex flex-col overflow-hidden shadow-xl transition-all duration-75 min-w-[320px] ${
+            isLight ? 'bg-white/80 border-slate-200/80 backdrop-blur-md' : 'bg-[#0e0e10]/80 border-white/10 backdrop-blur-md'
+          }`}
+        >
           {/* Tab Navigation Header - Curved Glass Widget Pill Bar */}
           <div className={`p-2 border-b text-xs font-semibold overflow-x-auto no-scrollbar shrink-0 flex items-center gap-1.5 ${
             isLight ? 'bg-slate-100/80 border-slate-200' : 'bg-[#0a0a0d]/80 border-white/10'
@@ -667,6 +772,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ initialSampleId, theme = '
                 code={code}
                 language={language}
                 theme={theme}
+                onLoadCodeToStudio={(newCode, newLang) => {
+                  if (newCode) setCode(newCode);
+                  if (newLang) setLanguage(newLang as ProgrammingLanguage);
+                }}
               />
             )}
 
@@ -957,16 +1066,35 @@ export const Dashboard: React.FC<DashboardProps> = ({ initialSampleId, theme = '
           </div>
 
           {/* Focus Mode Side-by-Side Split Workspace */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 flex-1 min-h-0 overflow-hidden">
-            {/* Left Monaco Code Editor (5 cols) */}
-            <div className="lg:col-span-5 rounded-2xl border border-white/10 bg-[#0e0e12] flex flex-col overflow-hidden shadow-2xl">
+          <div
+            id="focus-split-container"
+            className="flex flex-col lg:flex-row gap-0 flex-1 min-h-0 overflow-hidden relative select-none rounded-2xl border border-white/10 bg-[#0e0e12]"
+          >
+            {/* Left Monaco Code Editor */}
+            <div
+              style={{ width: typeof window !== 'undefined' && window.innerWidth >= 1024 ? `${splitRatio}%` : '100%' }}
+              className="flex flex-col overflow-hidden shadow-2xl transition-all duration-75 border-r border-white/10 min-w-[280px]"
+            >
               <div className="px-4 py-2 border-b border-white/10 bg-[#121218] flex items-center justify-between text-xs font-mono text-slate-300">
                 <div className="flex items-center space-x-2">
                   <Code2 className="w-3.5 h-3.5 text-cyan-400" />
                   <span className="font-bold text-white">Monaco Code Editor</span>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <span className="text-[10px] text-slate-400">{language.toUpperCase()}</span>
+                  <div className="hidden sm:flex items-center space-x-1 text-[10px]">
+                    {[30, 40, 50, 60, 70].map((ratio) => (
+                      <button
+                        key={ratio}
+                        onClick={() => setSplitRatio(ratio)}
+                        className={`px-1.5 py-0.5 rounded transition-all cursor-pointer ${
+                          Math.round(splitRatio) === ratio ? 'bg-cyan-600 text-white font-bold' : 'bg-slate-800/80 text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        {ratio}%
+                      </button>
+                    ))}
+                  </div>
+                  <span className="text-[10px] text-slate-400 uppercase">{language}</span>
                   <span className="px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 text-[10px]">
                     {code.split('\n').length} lines
                   </span>
@@ -980,7 +1108,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ initialSampleId, theme = '
                   onChange={(val) => setCode(val || '')}
                   theme="vs-dark"
                   options={{
-                    fontSize: 14,
+                    fontSize: editorFontSize,
                     fontFamily: 'JetBrains Mono, Fira Code, monospace',
                     minimap: { enabled: true },
                     scrollBeyondLastLine: false,
@@ -994,8 +1122,37 @@ export const Dashboard: React.FC<DashboardProps> = ({ initialSampleId, theme = '
               </div>
             </div>
 
-            {/* Right Visualizer & Step Player Panel (7 cols) */}
-            <div className="lg:col-span-7 rounded-2xl border border-white/10 bg-[#0e0e12] flex flex-col overflow-hidden shadow-2xl p-4 overflow-y-auto">
+            {/* Focus Mode Draggable Divider */}
+            <div
+              onMouseDown={(e) => {
+                e.preventDefault();
+                setIsDraggingSplit(true);
+              }}
+              onDoubleClick={() => setSplitRatio(42)}
+              className={`hidden lg:flex w-2.5 hover:w-3 bg-slate-800 cursor-col-resize items-center justify-center transition-all z-20 group shrink-0 ${
+                isDraggingSplit ? 'bg-cyan-500 w-3 shadow-lg shadow-cyan-500/50' : ''
+              }`}
+              title="Drag left/right to resize split panels (Double click to reset)"
+            >
+              <GripVertical className="w-3 h-3 text-slate-400 group-hover:text-white" />
+            </div>
+
+            {/* Right Visualizer & Step Player Panel */}
+            <div
+              style={{ width: typeof window !== 'undefined' && window.innerWidth >= 1024 ? `${100 - splitRatio}%` : '100%' }}
+              className="flex flex-col overflow-hidden shadow-2xl p-4 overflow-y-auto min-w-[320px]"
+            >
+              {activeTab === 'chatgpt' && (
+                <ChatGPTExplainerView
+                  code={code}
+                  language={language}
+                  theme={theme}
+                  onLoadCodeToStudio={(newCode, newLang) => {
+                    if (newCode) setCode(newCode);
+                    if (newLang) setLanguage(newLang as ProgrammingLanguage);
+                  }}
+                />
+              )}
               {activeTab === 'pythontutor' && (
                 <PythonTutorViewer code={code} language={language} theme={theme} />
               )}

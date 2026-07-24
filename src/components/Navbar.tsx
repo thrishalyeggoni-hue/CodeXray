@@ -45,6 +45,9 @@ export const Navbar: React.FC<NavbarProps> = ({
         ? 'border-slate-200/80 bg-white/80 text-slate-800 shadow-sm'
         : 'border-white/10 bg-[#080911]/85 text-slate-100 shadow-lg shadow-black/20'
     }`}>
+      {/* Moving 3px Multi-Color Gradient Accent Line */}
+      <div className="h-[3px] w-full bg-gradient-to-r from-violet-600 via-indigo-500 via-cyan-400 via-emerald-400 to-amber-400 animate-moving-gradient shadow-[0_0_12px_rgba(99,102,241,0.6)]" />
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo Component */}

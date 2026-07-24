@@ -42,7 +42,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       title: 'Python Tutor Memory Visualizer (HIGHLIGHT)',
       description:
         'Step-by-step memory execution tracer. Inspect local stack frames, heap objects, global pointers, and array mutations in real-time.',
-      color: 'text-indigo-400 bg-indigo-500/10 border-indigo-500/20',
+      color: 'text-indigo-700 dark:text-indigo-400 bg-indigo-100/70 dark:bg-indigo-500/10 border-indigo-200 dark:border-indigo-500/20',
       highlight: true,
     },
     {
@@ -50,35 +50,35 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       title: 'Line-by-Line Code Breakdown',
       description:
         'Deconstruct complex code line-by-line with exact scope impact, variable mutations, and statement explanations.',
-      color: 'text-indigo-400 bg-indigo-500/10 border-indigo-500/20',
+      color: 'text-indigo-700 dark:text-indigo-400 bg-indigo-100/70 dark:bg-indigo-500/10 border-indigo-200 dark:border-indigo-500/20',
     },
     {
       icon: Activity,
       title: 'Interactive Dry Run Simulator',
       description:
         'Step through code execution statement by statement. Watch variable values mutate live in sync with the editor.',
-      color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
+      color: 'text-emerald-800 dark:text-emerald-400 bg-emerald-100/70 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20',
     },
     {
       icon: HelpCircle,
       title: 'AI Self-Test Quiz Generator',
       description:
         'Test your comprehension with 5-question multiple-choice quizzes, instant scoring, explanations, and celebrations.',
-      color: 'text-amber-400 bg-amber-500/10 border-amber-500/20',
+      color: 'text-amber-800 dark:text-amber-400 bg-amber-100/70 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/20',
     },
     {
       icon: MessagesSquare,
       title: 'Technical Interview Prep & Answer Keys',
       description:
         'Prepare for technical interviews with realistic questions, candidate hints, key talking points, and model answer keys.',
-      color: 'text-purple-400 bg-purple-500/10 border-purple-500/20',
+      color: 'text-purple-800 dark:text-purple-400 bg-purple-100/70 dark:bg-purple-500/10 border-purple-200 dark:border-purple-500/20',
     },
     {
       icon: BookOpen,
       title: 'Algorithmic Revision Exam Notes',
       description:
         'Auto-generate structured revision study notes with algorithm steps, pros/cons, time complexity, and real-world usage.',
-      color: 'text-cyan-400 bg-cyan-500/10 border-cyan-500/20',
+      color: 'text-teal-800 dark:text-cyan-400 bg-teal-100/70 dark:bg-cyan-500/10 border-teal-200 dark:border-cyan-500/20',
     },
   ];
 
@@ -176,8 +176,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         }`}>
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="space-y-3 text-left max-w-xl">
-              <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-gradient-to-r from-blue-500/10 to-purple-500/10 text-cyan-300 border border-cyan-500/20 text-xs font-bold uppercase tracking-wider">
-                <MonitorPlay className="w-3.5 h-3.5 text-cyan-400" />
+              <div className={`inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full border text-xs font-bold uppercase tracking-wider ${
+                isLight
+                  ? 'bg-indigo-100/90 border-indigo-300 text-indigo-900 shadow-sm'
+                  : 'bg-gradient-to-r from-blue-500/10 to-purple-500/10 text-cyan-300 border-cyan-500/20'
+              }`}>
+                <MonitorPlay className={`w-3.5 h-3.5 ${isLight ? 'text-indigo-700' : 'text-cyan-400'}`} />
                 <span>Featured Engine: Python Tutor Step Visualizer</span>
               </div>
               <h2 className={`text-2xl sm:text-3xl font-extrabold ${isLight ? 'text-slate-900' : 'text-white'}`}>

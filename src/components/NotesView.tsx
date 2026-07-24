@@ -242,7 +242,7 @@ export const NotesView: React.FC<NotesViewProps> = ({
   <body>
     <div class="no-print-toolbar">
       <div style="display: flex; align-items: center; gap: 10px;">
-        <button class="btn" style="background:#334155; font-size: 11px;" onclick="window.close()">← Close Preview & Return</button>
+        <button class="btn" style="background:#334155; font-size: 11px;" onclick="if(window.opener && !window.opener.closed){window.close();}else{window.history.back();}">← Close Preview & Return</button>
         <span style="font-weight: 700; font-size: 12px;">CodeXray AI - Printable Exam Sheet & Python Tutor Trace</span>
       </div>
       <button class="btn" onclick="window.print()">Print / Save as PDF</button>
@@ -572,11 +572,17 @@ ${notesData.cheatSheetSummary}
       if (win) {
         win.focus();
       } else {
-        handleDownloadHtml();
+        setShowPreviewModal(true);
+        setTimeout(() => {
+          try { window.print(); } catch (err) {}
+        }, 300);
       }
     } catch (e) {
       console.warn('Failed to open standalone print tab:', e);
-      handleDownloadHtml();
+      setShowPreviewModal(true);
+      setTimeout(() => {
+        try { window.print(); } catch (err) {}
+      }, 300);
     }
   };
 

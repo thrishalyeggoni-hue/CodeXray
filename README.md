@@ -77,35 +77,45 @@ CodeXray AI features a sleek, high-contrast dark/light studio interface designed
 
 ---
 
-## 🔍 In-Depth Feature Breakdown & Visual Design
+## 🔍 In-Depth Feature List (Point-by-Point)
 
-### 1. 🔍 Line-by-Line Code X-Ray & Execution Analyzer
-- **Visuals:** High-contrast line highlighting with glowing indicator icons, variable state delta tags (e.g. `low: 0 ➔ 3`), and execution path step counters.
-- **How It Works:** Parses the submitted algorithm and traces execution line-by-line. It displays line explanations, variable values at each exact step, and flags potential edge-case branches (like zero division, empty collections, or infinite loops).
+Here is everything a student or developer can do using **CodeXray AI**:
 
-### 2. 🧠 Python Tutor Style Execution Tracer
-- **Visuals:** Visual call stack frame blocks rendered with clean borders, variable scope tags (Global vs Function Local), and object memory pointer connections.
-- **How It Works:** Emulates classic Python Tutor visualizations directly inside the browser across multiple programming languages (Python, JavaScript, C++, Java, Go, TypeScript). Shows exact stack frame pushes and pops as functions recurse or return values.
+### 1. 🧠 Python Tutor Memory Trace (2-Line Highlight)
+> **Python Tutor Trace visualizes execution step-by-step by rendering call stack frames, variable scopes, and heap memory pointers in real-time.**
+> **It helps students instantly grasp pointer shifts, array mutations, and recursion call stack depth across Python, Java, C++, JavaScript, and Go.**
 
-### 3. ⚡ Interactive Memory Dry-Run Simulator
-- **Visuals:** Control bar featuring `[⏮ Step Back]`, `[⏯ Play/Pause]`, `[⏭ Step Forward]`, and `[🔄 Reset]`, accompanied by live variable tables, array pointer trackers, and a simulated standard terminal output box.
-- **How It Works:** Allows students to manually step forward and backward through code execution like a media player. Memory state changes are highlighted in real-time so users can observe how loop counters change array indices.
+### 2. 🤖 ChatGPT & Gemini Code Explainer
+- **Generate Step-by-Step Logic Walkthroughs:** Click a button to get a full line-by-line explanation of how your code executes from start to finish.
+- **Interactive AI Chat:** Ask follow-up questions like *"Explain line 4"*, *"How to handle empty arrays?"*, or *"Optimize this loop"*.
+- **One-Click Code Transfer:** Click **"Load in Studio Editor"** on any code block generated in the AI chat to paste it directly into your Monaco Editor workspace.
 
-### 4. 📝 Exam & Interview Revision Cheat Sheet Generator
-- **Visuals:** A structured layout containing an Algorithmic Overview, Big-O Time & Space Complexity cards (`O(1)` best, `O(log N)` average, `O(N)` worst), Code Walkthrough notes, Common Pitfalls, and a **Printable Exam PDF Preview modal**.
-- **How It Works:** Generates a complete exam revision cheat sheet from any code snippet. Includes a dedicated **"Back to Code Studio"** button on both screen and print toolbar previews for effortless navigation.
+### 3. 🌓 Visually Appealing Light & Dark Studio Modes
+- **Seamless Theme Switcher:** Toggle between a high-contrast dark twilight studio theme (ideal for night study sessions) and a crisp glassmorphism light theme.
+- **Eye-Safe Reading & Legibility:** Carefully calibrated color ratios pass WCAG AA contrast standards for effortless long-term reading.
 
-### 5. 🤖 ChatGPT & Gemini Code Explainer
-- **Visuals:** Markdown-rendered explanation tabs with syntax-highlighted code cards, key concept takeaways, and mathematical formulations cleanly formatted without messy raw LaTeX tags.
-- **How It Works:** Powered by Google's Gemini API with smart multi-model fallback handling (`gemini-3.6-flash`, `gemini-3.1-pro-preview`, `gemini-flash-latest`, `gemini-3.1-flash-lite`). If quota limits occur, the system smoothly transitions through fallback models and rule-based analytical engines.
+### 4. 🖨️ Downloadable & Printable Exam Notes Cheat Sheet
+- **Instant Revision Generator:** Creates an instant exam cheat sheet containing Big-O time/space complexity matrices, code walk-throughs, and key algorithmic takeaways.
+- **Print & PDF Export:** Click **"Print / Export PDF Notes"** to print or save a clean, professional PDF study document formatted specifically for exams.
 
-### 6. 🎯 Interactive AI Comprehension Quizzes & Interview Prep
-- **Visuals:** Styled multiple-choice cards with option buttons, instant score tracking, correct answer explanations, and edge-case technical interview question cards (e.g., *"How would this algorithm handle negative integer inputs or duplicate elements?"*).
-- **How It Works:** Evaluates the user's code snippet and creates targeted diagnostic questions testing variable scope, algorithm efficiency, and boundary condition handling.
+### 5. 📐 Interactive Resizable Window Workspace & Font Controls
+- **Drag-to-Resize Panel Splitter:** Click and drag the vertical divider bar between the Code Editor and Visualizer panels to adjust panel widths in real-time.
+- **Quick Split Presets:** Jump instantly between preset layout ratios (`30/70`, `40/60`, `50/50`, `60/40`, `70/30`).
+- **Editor Font Size Adjuster:** Scale code font size up or down (`11px` to `22px`) with a single click.
+- **Adjustable Chat Window Height:** Toggle ChatGPT window height between `Normal (400px)`, `Tall (600px)`, and `Expanded (800px)`.
 
-### 7. 📜 Code Studio History & One-Click Reload
-- **Visuals:** Visual snippet cards featuring language tags, code preview blocks, creation timestamps, and interactive action buttons.
-- **How It Works:** Saves generated analyses in client history. Clicking anywhere on a snippet card or pressing **"Load in Studio Editor"** instantly populates the main editor and switches back to the active analysis view.
+### 6. ⚡ Interactive Memory Dry-Run Simulator
+- **Step-by-Step Media Player:** Step forward and backward through execution using `[⏮ Step Back]`, `[⏯ Play/Pause]`, `[⏭ Step Forward]`, and `[🔄 Reset]`.
+- **Live Monaco Line Highlighting:** The code editor automatically scrolls and highlights the active line being executed during dry runs.
+- **Simulated Terminal & Variable Table:** Live tracking of variable changes and standard output streams.
+
+### 7. 🎯 AI Diagnostic Self-Quizzes & Technical Interview Prep
+- **Interactive Multiple-Choice Quizzes:** Test your understanding with auto-generated questions tailored to your exact code snippet.
+- **Mock Technical Interview Prompts:** Practice answering tricky edge-case interview questions with sample answer breakdowns.
+
+### 8. 📜 Saved Code Snippet History & Preset Library
+- **Pre-loaded Algorithm Library:** Select standard interview algorithms (Binary Search, Two Sum, QuickSort, MergeSort, Merge Intervals, Linked List Reversal, Fibonacci) across 8+ languages.
+- **Local History Tracker:** Automatically saves past code analyses so you can reload any previous snippet with a single click.
 
 ---
 
