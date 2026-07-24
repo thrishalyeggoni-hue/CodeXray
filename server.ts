@@ -1,3 +1,4 @@
+import "dotenv/config";
 import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
@@ -132,30 +133,123 @@ Provide:
     },
   };
 
-  try {
-    const response = await ai.models.generateContent({
-      model: "gemini-3.6-flash",
-      contents: prompt,
-      config,
-    });
+  // Multi-model fallback sequence for highest availability
+  const modelsToTry = ["gemini-3.6-flash", "gemini-3.1-pro-preview", "gemini-2.5-pro", "gemini-2.5-flash"];
 
-    const parsed = JSON.parse(cleanJsonText(response.text || "{}"));
-    return res.json(parsed);
-  } catch (err: any) {
-    // Attempt fallback model if 429 rate limit or primary model fails
+  for (const model of modelsToTry) {
     try {
-      const fallbackRes = await ai.models.generateContent({
-        model: "gemini-flash-latest",
+      const response = await ai.models.generateContent({
+        model,
         contents: prompt,
         config,
       });
-      const parsedFallback = JSON.parse(cleanJsonText(fallbackRes.text || "{}"));
-      return res.json(parsedFallback);
-    } catch (fallbackErr: any) {
-      console.warn("[Gemini API Quota/Rate Limit] Serving rule-based code analysis engine.");
-      return res.json(generateFallbackAnalysis(code, language));
+
+      const text = response?.text;
+      if (text) {
+        const parsed = JSON.parse(cleanJsonText(text));
+        return res.json(parsed);
+      }
+    } catch (err: any) {
+      console.warn(`[Gemini Analyze] Model ${model} failed: ${err?.message || err}. Trying next fallback...`);
     }
   }
+
+  console.warn("[Gemini API Quota/Rate Limit] Serving rule-based code analysis engine.");
+  return res.json(generateFallbackAnalysis(code, language));
+});
+
+// 2. Gemini Conversational AI Chat API
+app.post("/api/chat", async (req, res) => {
+  const { prompt, code, language, history, enableSearch = true } = req.body || {};
+  if (!prompt || typeof prompt !== "string") {
+    return res.status(400).json({ error: "Prompt is required." });
+  }
+
+  const ai = getGenAI();
+
+  // Dynamic system date context
+  const now = new Date();
+  const dateFormatted = now.toLocaleDateString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+
+  if (!ai) {
+    return res.json({
+      answer: getLocalChatAnswer(prompt, dateFormatted, code, language),
+    });
+  }
+
+  const systemInstruction = `You are Google Gemini, a large language model built by Google.
+Today's Date: ${dateFormatted} (${now.toISOString().split("T")[0]}).
+You are helpful, knowledgeable, concise, and direct.
+Provide accurate answers to all queries including general knowledge, current facts, coding tasks, algorithm explanations, and code debugging.
+Format responses with clean Markdown, bold headers, and syntax-highlighted code blocks where appropriate.`;
+
+  // Build content array with multi-turn conversation history
+  const contents: any[] = [];
+  if (Array.isArray(history) && history.length > 0) {
+    history.forEach((h: { sender: string; text: string; codeSnippet?: string }) => {
+      const role = h.sender === "user" ? "user" : "model";
+      let contentText = h.text;
+      if (h.codeSnippet) {
+        contentText += `\n\nAttached Code:\n\`\`\`\n${h.codeSnippet}\n\`\`\``;
+      }
+      contents.push({ role, parts: [{ text: contentText }] });
+    });
+  }
+
+  let currentText = prompt;
+  if (code) {
+    currentText = `User query: ${prompt}\n\nAttached Code (${language || "auto"}):\n\`\`\`${language || "text"}\n${code}\n\`\`\``;
+  }
+  contents.push({ role: "user", parts: [{ text: currentText }] });
+
+  const modelsToTry = ["gemini-3.6-flash", "gemini-3.1-pro-preview", "gemini-2.5-pro", "gemini-2.5-flash"];
+
+  // 1. First attempt with search grounding across models
+  if (enableSearch) {
+    for (const model of modelsToTry) {
+      try {
+        const response = await ai.models.generateContent({
+          model,
+          contents,
+          config: {
+            systemInstruction,
+            tools: [{ googleSearch: {} }],
+          },
+        });
+        if (response?.text) {
+          return res.json({ answer: response.text });
+        }
+      } catch (err: any) {
+        console.warn(`[Gemini Chat Search Grounding] Model ${model} failed: ${err?.message || err}`);
+      }
+    }
+  }
+
+  // 2. Second attempt without search tools across models
+  for (const model of modelsToTry) {
+    try {
+      const response = await ai.models.generateContent({
+        model,
+        contents,
+        config: { systemInstruction },
+      });
+      if (response?.text) {
+        return res.json({ answer: response.text });
+      }
+    } catch (err: any) {
+      console.warn(`[Gemini Chat Standard] Model ${model} failed: ${err?.message || err}`);
+    }
+  }
+
+  // 3. Intelligent fallback if Gemini API free quota is temporarily reached (429)
+  return res.json({
+    answer: getLocalChatAnswer(prompt, dateFormatted, code, language),
+  });
 });
 
 // 3. Dry Run Simulation Trace API
@@ -217,29 +311,28 @@ Return JSON:
     },
   };
 
-  try {
-    const response = await ai.models.generateContent({
-      model: "gemini-3.6-flash",
-      contents: prompt,
-      config,
-    });
+  const modelsToTry = ["gemini-3.6-flash", "gemini-3.1-pro-preview", "gemini-2.5-pro", "gemini-2.5-flash"];
 
-    const parsed = JSON.parse(cleanJsonText(response.text || "{}"));
-    return res.json(parsed);
-  } catch (err) {
+  for (const model of modelsToTry) {
     try {
-      const fallbackRes = await ai.models.generateContent({
-        model: "gemini-flash-latest",
+      const response = await ai.models.generateContent({
+        model,
         contents: prompt,
         config,
       });
-      const parsedFallback = JSON.parse(cleanJsonText(fallbackRes.text || "{}"));
-      return res.json(parsedFallback);
-    } catch (fallbackErr) {
-      console.warn("[Gemini API Quota/Rate Limit] Serving rule-based dry run simulator.");
-      return res.json(generateFallbackDryRun(code));
+
+      const text = response?.text;
+      if (text) {
+        const parsed = JSON.parse(cleanJsonText(text));
+        return res.json(parsed);
+      }
+    } catch (err: any) {
+      console.warn(`[Gemini DryRun] Model ${model} failed: ${err?.message || err}. Trying next...`);
     }
   }
+
+  console.warn("[Gemini API Quota/Rate Limit] Serving rule-based dry run simulator.");
+  return res.json(generateFallbackDryRun(code));
 });
 
 // 4. AI Quiz Generator API
@@ -298,29 +391,28 @@ Return JSON:
     },
   };
 
-  try {
-    const response = await ai.models.generateContent({
-      model: "gemini-3.6-flash",
-      contents: prompt,
-      config,
-    });
+  const modelsToTry = ["gemini-3.6-flash", "gemini-3.1-pro-preview", "gemini-2.5-pro", "gemini-2.5-flash"];
 
-    const parsed = JSON.parse(cleanJsonText(response.text || "{}"));
-    return res.json(parsed);
-  } catch (err) {
+  for (const model of modelsToTry) {
     try {
-      const fallbackRes = await ai.models.generateContent({
-        model: "gemini-flash-latest",
+      const response = await ai.models.generateContent({
+        model,
         contents: prompt,
         config,
       });
-      const parsedFallback = JSON.parse(cleanJsonText(fallbackRes.text || "{}"));
-      return res.json(parsedFallback);
-    } catch (fallbackErr) {
-      console.warn("[Gemini API Quota/Rate Limit] Serving rule-based quiz generator.");
-      return res.json(generateFallbackQuiz(code));
+
+      const text = response?.text;
+      if (text) {
+        const parsed = JSON.parse(cleanJsonText(text));
+        return res.json(parsed);
+      }
+    } catch (err: any) {
+      console.warn(`[Gemini Quiz] Model ${model} failed: ${err?.message || err}. Trying next...`);
     }
   }
+
+  console.warn("[Gemini API Quota/Rate Limit] Serving rule-based quiz generator.");
+  return res.json(generateFallbackQuiz(code));
 });
 
 // 5. Interview Preparation API
@@ -352,33 +444,32 @@ Return JSON:
   - sampleAnswer: comprehensive model answer
   - keyPointsToMention: array of 3 key points the candidate should articulate`;
 
-  try {
-    const response = await ai.models.generateContent({
-      model: "gemini-3.6-flash",
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-      },
-    });
+  const config = {
+    responseMimeType: "application/json",
+  };
 
-    const parsed = JSON.parse(cleanJsonText(response.text || "{}"));
-    return res.json(parsed);
-  } catch (err) {
+  const modelsToTry = ["gemini-3.6-flash", "gemini-3.1-pro-preview", "gemini-2.5-pro", "gemini-2.5-flash"];
+
+  for (const model of modelsToTry) {
     try {
-      const fallbackRes = await ai.models.generateContent({
-        model: "gemini-flash-latest",
+      const response = await ai.models.generateContent({
+        model,
         contents: prompt,
-        config: {
-          responseMimeType: "application/json",
-        },
+        config,
       });
-      const parsedFallback = JSON.parse(cleanJsonText(fallbackRes.text || "{}"));
-      return res.json(parsedFallback);
-    } catch (fallbackErr) {
-      console.warn("[Gemini API Quota/Rate Limit] Serving rule-based interview prep module.");
-      return res.json(generateFallbackInterview(code));
+
+      const text = response?.text;
+      if (text) {
+        const parsed = JSON.parse(cleanJsonText(text));
+        return res.json(parsed);
+      }
+    } catch (err: any) {
+      console.warn(`[Gemini Interview] Model ${model} failed: ${err?.message || err}. Trying next...`);
     }
   }
+
+  console.warn("[Gemini API Quota/Rate Limit] Serving rule-based interview prep module.");
+  return res.json(generateFallbackInterview(code));
 });
 
 // 6. Exam Notes Generator API
@@ -409,33 +500,32 @@ Return JSON:
 - realWorldApplications: string[]
 - cheatSheetSummary: 3 bullet high-yield key takeaways for rapid review`;
 
-  try {
-    const response = await ai.models.generateContent({
-      model: "gemini-3.6-flash",
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-      },
-    });
+  const config = {
+    responseMimeType: "application/json",
+  };
 
-    const parsed = JSON.parse(cleanJsonText(response.text || "{}"));
-    return res.json(parsed);
-  } catch (err) {
+  const modelsToTry = ["gemini-3.6-flash", "gemini-3.1-pro-preview", "gemini-2.5-pro", "gemini-2.5-flash"];
+
+  for (const model of modelsToTry) {
     try {
-      const fallbackRes = await ai.models.generateContent({
-        model: "gemini-flash-latest",
+      const response = await ai.models.generateContent({
+        model,
         contents: prompt,
-        config: {
-          responseMimeType: "application/json",
-        },
+        config,
       });
-      const parsedFallback = JSON.parse(cleanJsonText(fallbackRes.text || "{}"));
-      return res.json(parsedFallback);
-    } catch (fallbackErr) {
-      console.warn("[Gemini API Quota/Rate Limit] Serving rule-based exam notes generator.");
-      return res.json(generateFallbackNotes(code));
+
+      const text = response?.text;
+      if (text) {
+        const parsed = JSON.parse(cleanJsonText(text));
+        return res.json(parsed);
+      }
+    } catch (err: any) {
+      console.warn(`[Gemini Notes] Model ${model} failed: ${err?.message || err}. Trying next...`);
     }
   }
+
+  console.warn("[Gemini API Quota/Rate Limit] Serving rule-based exam notes generator.");
+  return res.json(generateFallbackNotes(code));
 });
 
 // Fallback Generators (so app works seamlessly even without API key or network glitch)
@@ -612,6 +702,45 @@ function generateFallbackNotes(code: string) {
     ],
     cheatSheetSummary: "Always validate edge cases (empty inputs, single element, duplicates). Memory overhead is O(1). Easily parallelizable if dataset is split into chunks.",
   };
+}
+
+function getLocalChatAnswer(prompt: string, dateFormatted: string, code?: string, language?: string): string {
+  const p = prompt.toLowerCase();
+
+  if (p.includes("date") || p.includes("today") || p.includes("time") || p.includes("day")) {
+    return `Today's date is **${dateFormatted}**.`;
+  }
+
+  if (p.includes("hi") || p.includes("hello") || p.includes("hey") || p.includes("greetings")) {
+    return `Hello! I am Google Gemini AI Assistant. How can I assist you with your code, algorithms, memory analysis, or interview preparation today?`;
+  }
+
+  if (code) {
+    return `### Code Analysis & Guidance (${language || "Code"})
+
+Here is a breakdown for your query regarding the provided code:
+
+**Key Takeaways:**
+1. **Algorithm Strategy:** The code implements logic with standard time and memory bounds.
+2. **Execution Flow:** Review variable initializations and boundary conditions carefully.
+3. **Optimization:** Ensure base cases (e.g., empty inputs or null references) are handled gracefully.
+
+\`\`\`${language || "text"}
+${code}
+\`\`\`
+
+If you'd like to trace stack frames line-by-line, switch to the **Python Tutor Trace** tab above!`;
+  }
+
+  return `### Gemini Assistant Response
+
+Regarding your query: **"${prompt}"**
+
+Here is a structured explanation:
+- **Overview:** Always ensure your algorithm handles core invariants and edge cases.
+- **Best Practice:** Maintain clear state updates and minimize redundant operations.
+
+Feel free to paste any code snippet into the left editor to perform dry runs, complexity evaluations, or step-by-step memory frame traces!`;
 }
 
 // Start server

@@ -19,6 +19,7 @@ import { QuizView } from './QuizView';
 import { InterviewView } from './InterviewView';
 import { NotesView } from './NotesView';
 import { PythonTutorViewer } from './PythonTutorViewer';
+import { AIAssistantsWebView } from './AIAssistantsWebView';
 import { fetchApiWithLogging } from '../services/apiService';
 import {
   Sparkles,
@@ -45,6 +46,8 @@ import {
   Lightbulb,
   MonitorPlay,
   FileText,
+  Maximize2,
+  Minimize2,
 } from 'lucide-react';
 
 interface DashboardProps {
@@ -57,13 +60,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ initialSampleId, theme = '
 
   const isLight = theme === 'light';
   const [language, setLanguage] = useState<ProgrammingLanguage>('java');
-  const [code, setCode] = useState<string>(SAMPLE_CODES[0].code);
-  const [selectedPreset, setSelectedPreset] = useState<string>(SAMPLE_CODES[0].id);
+  const [code, setCode] = useState<string>('');
+  const [selectedPreset, setSelectedPreset] = useState<string>('');
 
   // Analysis States
   const [activeTab, setActiveTab] = useState<
-    'xray' | 'dryrun' | 'complexity' | 'pythontutor' | 'quiz' | 'interview' | 'notes'
-  >('xray');
+    'geminichat' | 'pythontutor' | 'xray' | 'dryrun' | 'complexity' | 'quiz' | 'interview' | 'notes'
+  >('geminichat');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
 
@@ -77,15 +80,32 @@ export const Dashboard: React.FC<DashboardProps> = ({ initialSampleId, theme = '
   // Active line highlight in Monaco editor during dry run
   const [highlightLineNumber, setHighlightLineNumber] = useState<number | undefined>(undefined);
   const [copied, setCopied] = useState(false);
+  const [isFocusMode, setIsFocusMode] = useState(false);
+
+  // Exit focus mode with Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsFocusMode(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // Auto-load preset if passed
   useEffect(() => {
     if (initialSampleId) {
-      const found = SAMPLE_CODES.find((s) => s.id === initialSampleId);
-      if (found) {
-        setLanguage(found.language);
-        setCode(found.code);
-        setSelectedPreset(found.id);
+      if (initialSampleId === 'empty') {
+        setCode('');
+        setSelectedPreset('');
+      } else {
+        const found = SAMPLE_CODES.find((s) => s.id === initialSampleId);
+        if (found) {
+          setLanguage(found.language);
+          setCode(found.code);
+          setSelectedPreset(found.id);
+        }
       }
     }
   }, [initialSampleId]);
@@ -293,32 +313,51 @@ export const Dashboard: React.FC<DashboardProps> = ({ initialSampleId, theme = '
         {/* Action CTAs */}
         <div className="flex items-center space-x-2">
           <motion.button
-            whileHover={{ scale: 1.04 }}
-            whileTap={{ scale: 0.96 }}
-            onClick={() => setActiveTab('pythontutor')}
-            className="flex items-center space-x-1.5 px-4 py-2 rounded-full bg-gradient-to-r from-indigo-600 via-purple-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 text-white font-semibold text-xs shadow-lg shadow-indigo-500/20 transition-all border border-purple-400/30 backdrop-blur-md"
-            title="Open Python Tutor Step-by-Step Memory Visualizer"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => setIsFocusMode(true)}
+            className={`flex items-center space-x-1.5 px-3.5 py-1.5 rounded-full text-xs font-medium border backdrop-blur-md transition-all shadow-sm cursor-pointer ${
+              isLight
+                ? 'bg-white/80 border-slate-300/80 text-slate-700 hover:bg-slate-100 hover:text-slate-900'
+                : 'bg-white/5 border-white/10 text-slate-300 hover:text-white hover:bg-white/10'
+            }`}
+            title="Expand into Distraction-Free Side-by-Side Focus Mode"
           >
-            <MonitorPlay className="w-3.5 h-3.5 text-cyan-300 animate-pulse" />
-            <span>🔥 Python Tutor Trace</span>
+            <Maximize2 className="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400" />
+            <span className="hidden sm:inline">Focus Mode</span>
           </motion.button>
 
           <motion.button
-            whileHover={{ scale: 1.04 }}
-            whileTap={{ scale: 0.96 }}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => setActiveTab('pythontutor')}
+            className={`flex items-center space-x-1.5 px-4 py-1.5 rounded-full text-xs font-medium border backdrop-blur-md transition-all shadow-sm cursor-pointer ${
+              isLight
+                ? 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100'
+                : 'bg-blue-500/10 border-blue-500/20 text-blue-300 hover:bg-blue-500/20'
+            }`}
+            title="Open Python Tutor Step-by-Step Memory Visualizer"
+          >
+            <MonitorPlay className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400" />
+            <span>Python Tutor Trace</span>
+          </motion.button>
+
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
             onClick={handleAnalyze}
             disabled={isAnalyzing}
-            className="flex items-center space-x-2 px-5 py-2 rounded-full bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-500 hover:to-pink-500 text-white font-semibold text-xs sm:text-sm shadow-xl shadow-purple-500/25 border border-purple-400/40 backdrop-blur-md disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            className="flex items-center space-x-2 px-5 py-1.5 rounded-full bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-medium text-xs sm:text-sm shadow-md border border-indigo-500/30 backdrop-blur-md disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer"
           >
             {isAnalyzing ? (
               <>
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Loader2 className="w-4 h-4 animate-spin text-indigo-200" />
                 <span>Analyzing Xray Data...</span>
               </>
             ) : (
               <>
-                <Sparkles className="w-4 h-4 text-amber-200 animate-pulse" />
-                <span>Analyze Code</span>
+                <Sparkles className="w-4 h-4 text-indigo-200" />
+                <span>Analyze with Gemini</span>
               </>
             )}
           </motion.button>
@@ -372,49 +411,66 @@ export const Dashboard: React.FC<DashboardProps> = ({ initialSampleId, theme = '
             isLight ? 'bg-slate-100/80 border-slate-200' : 'bg-[#0a0a0d]/80 border-white/10'
           }`}>
             <motion.button
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
-              onClick={() => setActiveTab('pythontutor')}
-              className={`flex items-center space-x-1.5 px-4 py-2 rounded-full border transition-all whitespace-nowrap font-bold text-xs shadow-md backdrop-blur-md ${
-                activeTab === 'pythontutor'
-                  ? isLight
-                    ? 'text-indigo-950 border-indigo-400 bg-indigo-100/90 shadow-indigo-500/10'
-                    : 'text-cyan-200 border-cyan-400/80 bg-gradient-to-r from-cyan-500/30 via-indigo-500/30 to-purple-500/30 shadow-cyan-500/20'
-                  : isLight
-                    ? 'text-indigo-700 bg-white/70 border-indigo-200/80 hover:bg-white hover:border-indigo-300'
-                    : 'text-indigo-300 bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20'
-              }`}
-            >
-              <MonitorPlay className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
-              <span>Python Tutor Trace</span>
-              <span className="ml-1 px-1.5 py-0.5 text-[9px] font-bold rounded-full uppercase bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-sm">
-                HOT
-              </span>
-            </motion.button>
-
-            <motion.button
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
-              onClick={() => setActiveTab('xray')}
-              className={`flex items-center space-x-1.5 px-4 py-2 rounded-full border transition-all whitespace-nowrap font-semibold text-xs backdrop-blur-md ${
-                activeTab === 'xray'
-                  ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white border-indigo-400/50 shadow-lg shadow-indigo-500/25'
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setActiveTab('geminichat')}
+              className={`flex items-center space-x-1.5 px-4 py-2 rounded-full border transition-all whitespace-nowrap font-medium text-xs backdrop-blur-md cursor-pointer ${
+                activeTab === 'geminichat'
+                  ? 'bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white border-purple-400 shadow-sm'
                   : isLight
                     ? 'bg-white/70 text-slate-700 border-slate-300/60 hover:bg-white hover:border-slate-300'
                     : 'bg-white/5 text-slate-300 border-white/10 hover:bg-white/10 hover:border-white/20'
               }`}
             >
-              <FileText className="w-3.5 h-3.5 text-indigo-400" />
+              <Sparkles className="w-3.5 h-3.5 text-cyan-300 animate-pulse" />
+              <span>ChatGPT • Gemini • Claude Web</span>
+              <span className="ml-1 px-1.5 py-0.5 text-[9px] font-semibold rounded-full uppercase bg-cyan-500/20 text-cyan-300 border border-cyan-400/30">
+                AI HUB
+              </span>
+            </motion.button>
+
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setActiveTab('pythontutor')}
+              className={`flex items-center space-x-1.5 px-4 py-2 rounded-full border transition-all whitespace-nowrap font-medium text-xs backdrop-blur-md cursor-pointer ${
+                activeTab === 'pythontutor'
+                  ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm'
+                  : isLight
+                    ? 'bg-white/70 text-slate-700 border-slate-300/60 hover:bg-white hover:border-slate-300'
+                    : 'bg-white/5 text-slate-300 border-white/10 hover:bg-white/10 hover:border-white/20'
+              }`}
+            >
+              <MonitorPlay className="w-3.5 h-3.5 text-blue-400" />
+              <span>Python Tutor Trace</span>
+              <span className="ml-1 px-1.5 py-0.5 text-[9px] font-semibold rounded-full uppercase bg-blue-500/20 text-blue-300 border border-blue-400/30">
+                HOT
+              </span>
+            </motion.button>
+
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setActiveTab('xray')}
+              className={`flex items-center space-x-1.5 px-4 py-2 rounded-full border transition-all whitespace-nowrap font-medium text-xs backdrop-blur-md cursor-pointer ${
+                activeTab === 'xray'
+                  ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm'
+                  : isLight
+                    ? 'bg-white/70 text-slate-700 border-slate-300/60 hover:bg-white hover:border-slate-300'
+                    : 'bg-white/5 text-slate-300 border-white/10 hover:bg-white/10 hover:border-white/20'
+              }`}
+            >
+              <FileText className="w-3.5 h-3.5 text-blue-400" />
               <span>Summary</span>
             </motion.button>
 
             <motion.button
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
               onClick={() => setActiveTab('dryrun')}
-              className={`flex items-center space-x-1.5 px-4 py-2 rounded-full border transition-all whitespace-nowrap font-semibold text-xs backdrop-blur-md ${
+              className={`flex items-center space-x-1.5 px-4 py-2 rounded-full border transition-all whitespace-nowrap font-medium text-xs backdrop-blur-md cursor-pointer ${
                 activeTab === 'dryrun'
-                  ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white border-indigo-400/50 shadow-lg shadow-indigo-500/25'
+                  ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm'
                   : isLight
                     ? 'bg-white/70 text-slate-700 border-slate-300/60 hover:bg-white hover:border-slate-300'
                     : 'bg-white/5 text-slate-300 border-white/10 hover:bg-white/10 hover:border-white/20'
@@ -425,12 +481,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ initialSampleId, theme = '
             </motion.button>
 
             <motion.button
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
               onClick={() => setActiveTab('complexity')}
-              className={`flex items-center space-x-1.5 px-4 py-2 rounded-full border transition-all whitespace-nowrap font-semibold text-xs backdrop-blur-md ${
+              className={`flex items-center space-x-1.5 px-4 py-2 rounded-full border transition-all whitespace-nowrap font-medium text-xs backdrop-blur-md cursor-pointer ${
                 activeTab === 'complexity'
-                  ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white border-indigo-400/50 shadow-lg shadow-indigo-500/25'
+                  ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm'
                   : isLight
                     ? 'bg-white/70 text-slate-700 border-slate-300/60 hover:bg-white hover:border-slate-300'
                     : 'bg-white/5 text-slate-300 border-white/10 hover:bg-white/10 hover:border-white/20'
@@ -441,12 +497,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ initialSampleId, theme = '
             </motion.button>
 
             <motion.button
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
               onClick={() => setActiveTab('quiz')}
-              className={`flex items-center space-x-1.5 px-4 py-2 rounded-full border transition-all whitespace-nowrap font-semibold text-xs backdrop-blur-md ${
+              className={`flex items-center space-x-1.5 px-4 py-2 rounded-full border transition-all whitespace-nowrap font-medium text-xs backdrop-blur-md cursor-pointer ${
                 activeTab === 'quiz'
-                  ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white border-indigo-400/50 shadow-lg shadow-indigo-500/25'
+                  ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm'
                   : isLight
                     ? 'bg-white/70 text-slate-700 border-slate-300/60 hover:bg-white hover:border-slate-300'
                     : 'bg-white/5 text-slate-300 border-white/10 hover:bg-white/10 hover:border-white/20'
@@ -457,12 +513,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ initialSampleId, theme = '
             </motion.button>
 
             <motion.button
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
               onClick={() => setActiveTab('interview')}
-              className={`flex items-center space-x-1.5 px-4 py-2 rounded-full border transition-all whitespace-nowrap font-semibold text-xs backdrop-blur-md ${
+              className={`flex items-center space-x-1.5 px-4 py-2 rounded-full border transition-all whitespace-nowrap font-medium text-xs backdrop-blur-md cursor-pointer ${
                 activeTab === 'interview'
-                  ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white border-indigo-400/50 shadow-lg shadow-indigo-500/25'
+                  ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm'
                   : isLight
                     ? 'bg-white/70 text-slate-700 border-slate-300/60 hover:bg-white hover:border-slate-300'
                     : 'bg-white/5 text-slate-300 border-white/10 hover:bg-white/10 hover:border-white/20'
@@ -473,12 +529,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ initialSampleId, theme = '
             </motion.button>
 
             <motion.button
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
               onClick={() => setActiveTab('notes')}
-              className={`flex items-center space-x-1.5 px-4 py-2 rounded-full border transition-all whitespace-nowrap font-semibold text-xs backdrop-blur-md ${
+              className={`flex items-center space-x-1.5 px-4 py-2 rounded-full border transition-all whitespace-nowrap font-medium text-xs backdrop-blur-md cursor-pointer ${
                 activeTab === 'notes'
-                  ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white border-indigo-400/50 shadow-lg shadow-indigo-500/25'
+                  ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm'
                   : isLight
                     ? 'bg-white/70 text-slate-700 border-slate-300/60 hover:bg-white hover:border-slate-300'
                     : 'bg-white/5 text-slate-300 border-white/10 hover:bg-white/10 hover:border-white/20'
@@ -491,12 +547,28 @@ export const Dashboard: React.FC<DashboardProps> = ({ initialSampleId, theme = '
 
 
           {/* Tab Body View */}
-          <div className="flex-1 p-5 overflow-y-auto space-y-6">
+          <div className="flex-1 p-3 sm:p-5 overflow-y-auto space-y-6">
             {analysisError && (
               <div className="p-4 rounded-lg bg-rose-950/80 border border-rose-800/60 text-rose-200 text-xs flex items-center space-x-2">
                 <AlertCircle className="w-4 h-4 shrink-0" />
                 <span>{analysisError}</span>
               </div>
+            )}
+
+            {/* TAB 0: MULTI-AI ASSISTANTS WEB HUB */}
+            {activeTab === 'geminichat' && (
+              <AIAssistantsWebView
+                code={code}
+                language={language}
+                theme={theme}
+                onLoadCodeToStudio={(loadedCode, lang) => {
+                  setCode(loadedCode);
+                  if (lang) {
+                    setLanguage(lang as any);
+                  }
+                  setActiveTab('pythontutor');
+                }}
+              />
             )}
 
             {/* TAB 1: XRAY ANALYSIS */}
@@ -681,6 +753,151 @@ export const Dashboard: React.FC<DashboardProps> = ({ initialSampleId, theme = '
           <span className="text-indigo-600 dark:text-indigo-400 font-semibold tracking-wide">CONFIDENTIAL & SECURE</span>
         </div>
       </div>
+
+      {/* FULL-SCREEN FOCUS MODE OVERLAY */}
+      {isFocusMode && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.98 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.98 }}
+          className="fixed inset-0 z-50 p-4 sm:p-6 bg-[#08080c] text-slate-100 flex flex-col backdrop-blur-3xl overflow-hidden"
+        >
+          {/* Focus Mode Top Bar */}
+          <div className="flex items-center justify-between pb-3 mb-3 border-b border-white/10 shrink-0">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 rounded-xl bg-gradient-to-r from-cyan-500/20 to-purple-500/20 border border-cyan-500/30">
+                <Maximize2 className="w-4 h-4 text-cyan-400 animate-pulse" />
+              </div>
+              <div>
+                <h2 className="text-sm font-bold text-white flex items-center gap-2">
+                  ⚡ CodeXray Immersive Focus Mode
+                  <span className="px-2 py-0.5 text-[10px] rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-mono">
+                    ESC to Exit
+                  </span>
+                </h2>
+                <p className="text-xs text-slate-400">
+                  Distraction-free side-by-side IDE with synchronized step-by-step memory trace
+                </p>
+              </div>
+            </div>
+
+            {/* Controls */}
+            <div className="flex items-center space-x-3">
+              <div className="flex items-center space-x-1.5 bg-white/5 border border-white/10 p-1 rounded-full text-xs">
+                <button
+                  onClick={() => setActiveTab('pythontutor')}
+                  className={`px-3 py-1 rounded-full transition-all ${
+                    activeTab === 'pythontutor'
+                      ? 'bg-gradient-to-r from-indigo-600 to-cyan-600 text-white font-bold'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Python Tutor
+                </button>
+                <button
+                  onClick={() => setActiveTab('dryrun')}
+                  className={`px-3 py-1 rounded-full transition-all ${
+                    activeTab === 'dryrun'
+                      ? 'bg-gradient-to-r from-indigo-600 to-cyan-600 text-white font-bold'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Dry Run AI
+                </button>
+                <button
+                  onClick={() => setActiveTab('xray')}
+                  className={`px-3 py-1 rounded-full transition-all ${
+                    activeTab === 'xray'
+                      ? 'bg-gradient-to-r from-indigo-600 to-cyan-600 text-white font-bold'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Summary
+                </button>
+              </div>
+
+              <button
+                onClick={handleAnalyze}
+                disabled={isAnalyzing}
+                className="px-4 py-1.5 rounded-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-xs font-bold hover:scale-105 transition-all shadow-lg shadow-indigo-500/20 disabled:opacity-50"
+              >
+                {isAnalyzing ? 'Analyzing...' : 'Re-Analyze'}
+              </button>
+
+              <button
+                onClick={() => setIsFocusMode(false)}
+                className="flex items-center space-x-1.5 px-3 py-1.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30 hover:bg-rose-500/30 transition-all text-xs font-semibold"
+                title="Exit Full-Screen Focus Mode"
+              >
+                <Minimize2 className="w-3.5 h-3.5" />
+                <span>Exit Focus Mode</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Focus Mode Side-by-Side Split Workspace */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 flex-1 min-h-0 overflow-hidden">
+            {/* Left Monaco Code Editor (5 cols) */}
+            <div className="lg:col-span-5 rounded-2xl border border-white/10 bg-[#0e0e12] flex flex-col overflow-hidden shadow-2xl">
+              <div className="px-4 py-2 border-b border-white/10 bg-[#121218] flex items-center justify-between text-xs font-mono text-slate-300">
+                <div className="flex items-center space-x-2">
+                  <Code2 className="w-3.5 h-3.5 text-cyan-400" />
+                  <span className="font-bold text-white">Monaco Code Editor</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <span className="text-[10px] text-slate-400">{language.toUpperCase()}</span>
+                  <span className="px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 text-[10px]">
+                    {code.split('\n').length} lines
+                  </span>
+                </div>
+              </div>
+              <div className="flex-1 min-h-0 relative">
+                <Editor
+                  height="100%"
+                  language={language === 'cpp' ? 'cpp' : language}
+                  value={code}
+                  onChange={(val) => setCode(val || '')}
+                  theme="vs-dark"
+                  options={{
+                    fontSize: 14,
+                    fontFamily: 'JetBrains Mono, Fira Code, monospace',
+                    minimap: { enabled: true },
+                    scrollBeyondLastLine: false,
+                    lineNumbers: 'on',
+                    roundedSelection: true,
+                    padding: { top: 12, bottom: 12 },
+                    tabSize: 2,
+                    automaticLayout: true,
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Right Visualizer & Step Player Panel (7 cols) */}
+            <div className="lg:col-span-7 rounded-2xl border border-white/10 bg-[#0e0e12] flex flex-col overflow-hidden shadow-2xl p-4 overflow-y-auto">
+              {activeTab === 'pythontutor' && (
+                <PythonTutorViewer code={code} language={language} theme={theme} />
+              )}
+              {activeTab === 'dryrun' && (
+                <DryRunPlayer
+                  dryRunData={dryRunData}
+                  onStepChange={(line) => setHighlightLineNumber(line)}
+                  theme={theme}
+                />
+              )}
+              {activeTab === 'xray' && analysisData && (
+                <div className="space-y-4 text-xs font-mono">
+                  <div className="p-4 rounded-xl bg-slate-900 border border-indigo-500/20 space-y-2">
+                    <h4 className="font-bold text-indigo-400 text-sm">Code Summary</h4>
+                    <p className="text-slate-300 leading-relaxed">{analysisData.summary}</p>
+                  </div>
+                  <LineByLineTable explanations={analysisData.lineByLine} theme={theme} />
+                </div>
+              )}
+            </div>
+          </div>
+        </motion.div>
+      )}
     </div>
   );
 };

@@ -3,15 +3,19 @@ import { LineExplanation } from '../types';
 import { Layers, ArrowRight, Zap, Lightbulb } from 'lucide-react';
 
 interface LineByLineTableProps {
-  lines: LineExplanation[];
+  lines?: LineExplanation[];
+  explanations?: LineExplanation[];
   highlightLine?: number;
+  theme?: 'dark' | 'light';
 }
 
 export const LineByLineTable: React.FC<LineByLineTableProps> = ({
   lines,
+  explanations,
   highlightLine,
 }) => {
-  if (!lines || lines.length === 0) {
+  const displayLines = explanations || lines || [];
+  if (!displayLines || displayLines.length === 0) {
     return (
       <div className="p-8 text-center text-slate-500 bg-slate-50 dark:bg-[#0e0e10] rounded-xl border border-slate-200 dark:border-white/5 text-xs">
         No line breakdown available. Click "Analyze Code" to generate.
@@ -27,7 +31,7 @@ export const LineByLineTable: React.FC<LineByLineTableProps> = ({
           <span>Line-by-Line Execution Breakdown</span>
         </div>
         <span className="text-[10px] text-slate-500 font-mono">
-          {lines.length} statement lines
+          {displayLines.length} statement lines
         </span>
       </div>
 
@@ -42,7 +46,7 @@ export const LineByLineTable: React.FC<LineByLineTableProps> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 dark:divide-white/5 font-mono text-xs">
-              {lines.map((line) => {
+              {displayLines.map((line) => {
                 const isHighlighted = highlightLine === line.lineNumber;
                 return (
                   <tr

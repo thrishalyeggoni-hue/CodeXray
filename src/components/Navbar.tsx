@@ -16,6 +16,7 @@ import { GoogleUser } from '../types';
 interface NavbarProps {
   currentView: 'landing' | 'dashboard';
   setCurrentView: (view: 'landing' | 'dashboard') => void;
+  onLaunchDashboard?: () => void;
   activeTab?: string;
   setActiveTab?: (tab: string) => void;
   theme?: 'dark' | 'light';
@@ -28,6 +29,7 @@ interface NavbarProps {
 export const Navbar: React.FC<NavbarProps> = ({
   currentView,
   setCurrentView,
+  onLaunchDashboard,
   theme = 'dark',
   onToggleTheme,
   user,
@@ -41,11 +43,8 @@ export const Navbar: React.FC<NavbarProps> = ({
     <header className={`sticky top-0 z-50 transition-all duration-300 border-b backdrop-blur-xl ${
       isLight
         ? 'border-slate-200/80 bg-white/80 text-slate-800 shadow-sm'
-        : 'border-white/10 bg-[#0a0a0e]/80 text-slate-100 shadow-lg shadow-purple-950/10'
+        : 'border-white/10 bg-[#080911]/85 text-slate-100 shadow-lg shadow-black/20'
     }`}>
-      {/* Top subtle gradient border line */}
-      <div className="h-[2px] w-full bg-gradient-to-r from-indigo-500 via-purple-500 to-cyan-400" />
-
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo Component */}
@@ -110,20 +109,26 @@ export const Navbar: React.FC<NavbarProps> = ({
             </motion.button>
 
             <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => setCurrentView('dashboard')}
-              className={`flex items-center space-x-2 px-4 py-1.5 rounded-full text-xs font-semibold backdrop-blur-md transition-all duration-200 shadow-lg ${
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => {
+                if (onLaunchDashboard) {
+                  onLaunchDashboard();
+                } else {
+                  setCurrentView('dashboard');
+                }
+              }}
+              className={`flex items-center space-x-2 px-4 py-1.5 rounded-full text-xs font-medium backdrop-blur-md transition-all duration-200 ${
                 currentView === 'dashboard'
-                  ? 'bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-500 hover:to-pink-500 text-white shadow-purple-500/25 border border-purple-400/30'
+                  ? 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-sm border border-indigo-500/30'
                   : isLight
-                    ? 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200'
-                    : 'bg-indigo-500/15 text-indigo-300 hover:bg-indigo-500/25 border border-indigo-500/30'
+                    ? 'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200'
+                    : 'bg-white/10 text-slate-200 hover:bg-white/15 border border-white/15'
               }`}
             >
               <LayoutDashboard className="w-3.5 h-3.5" />
               <span>Studio</span>
-              <Sparkles className="w-3 h-3 text-amber-300 animate-pulse" />
+              <Sparkles className="w-3 h-3 text-indigo-200" />
             </motion.button>
 
             {/* Google Account Authentication */}

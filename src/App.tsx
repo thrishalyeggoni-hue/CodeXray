@@ -44,6 +44,7 @@ export default function App() {
   };
 
   const handleLaunchDashboard = () => {
+    setInitialSampleId('empty');
     setCurrentView('dashboard');
   };
 
@@ -65,25 +66,30 @@ export default function App() {
   return (
     <div className={`min-h-screen relative transition-colors duration-300 font-sans overflow-x-hidden ${
       theme === 'light'
-        ? 'bg-slate-50 text-slate-800 selection:bg-indigo-500/20 selection:text-indigo-900 bg-grid-pattern-light'
-        : 'bg-[#09090c] text-slate-100 selection:bg-purple-500/30 selection:text-purple-200 bg-grid-pattern'
+        ? 'bg-[#f8fafd] text-slate-800 selection:bg-blue-500/20 selection:text-blue-900 bg-grid-pattern-light'
+        : 'bg-[#080912] text-slate-100 selection:bg-purple-500/30 selection:text-purple-200 bg-grid-pattern'
     }`}>
-      {/* Dynamic Background Glow Blobs */}
+      {/* Dynamic Gemini Aurora Background Glow Blobs */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
         <div className={`absolute -top-32 -left-32 w-96 h-96 rounded-full blur-[120px] animate-pulse-glow ${
           theme === 'light'
-            ? 'bg-indigo-400/25'
-            : 'bg-indigo-600/20'
+            ? 'bg-blue-400/20'
+            : 'bg-blue-600/25'
         }`} />
-        <div className={`absolute top-1/3 -right-32 w-[30rem] h-[30rem] rounded-full blur-[130px] animate-pulse-glow delay-1000 ${
+        <div className={`absolute top-1/3 -right-32 w-[32rem] h-[32rem] rounded-full blur-[140px] animate-pulse-glow delay-1000 ${
           theme === 'light'
             ? 'bg-purple-300/20'
-            : 'bg-purple-600/15'
+            : 'bg-purple-600/20'
         }`} />
-        <div className={`absolute -bottom-32 left-1/3 w-[28rem] h-[28rem] rounded-full blur-[140px] animate-pulse-glow delay-2000 ${
+        <div className={`absolute -bottom-32 left-1/3 w-[30rem] h-[30rem] rounded-full blur-[140px] animate-pulse-glow delay-2000 ${
           theme === 'light'
-            ? 'bg-cyan-300/20'
-            : 'bg-cyan-600/15'
+            ? 'bg-pink-300/20'
+            : 'bg-pink-600/15'
+        }`} />
+        <div className={`absolute top-1/2 left-10 w-80 h-80 rounded-full blur-[120px] animate-pulse-glow delay-3000 ${
+          theme === 'light'
+            ? 'bg-cyan-300/15'
+            : 'bg-cyan-500/15'
         }`} />
       </div>
 
@@ -91,6 +97,7 @@ export default function App() {
         <Navbar
           currentView={currentView}
           setCurrentView={setCurrentView}
+          onLaunchDashboard={handleLaunchDashboard}
           theme={theme}
           onToggleTheme={toggleTheme}
           user={user}

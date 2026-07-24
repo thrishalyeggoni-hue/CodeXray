@@ -23,6 +23,24 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({
   const [isCustomMode, setIsCustomMode] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Pre-configured accounts list for seamless account selection
+  const accountsList = [
+    {
+      name: 'Thrishal Yeggoni',
+      email: defaultEmail,
+      avatar: 'TY',
+      badge: 'Active Google Session',
+      color: 'bg-indigo-600',
+    },
+    {
+      name: 'Thrishal Yeggoni (Dev)',
+      email: 'thrishal.developer@gmail.com',
+      avatar: 'TD',
+      badge: 'Developer Workspace',
+      color: 'bg-emerald-600',
+    },
+  ];
+
   if (!isOpen) return null;
 
   const handleGoogleSignIn = (name: string, email: string) => {
@@ -102,44 +120,59 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({
           </div>
 
           {!isCustomMode ? (
-            <div className="space-y-3 pt-2">
-              {/* One-Click Google Account Option */}
+            <div className="space-y-3 pt-1">
+              <div className={`text-[11px] font-medium tracking-wide uppercase px-1 ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                Choose an account
+              </div>
+
+              {/* Dynamic Accounts List */}
+              {accountsList.map((acc, index) => (
+                <button
+                  key={index}
+                  disabled={isLoading}
+                  onClick={() => handleGoogleSignIn(acc.name, acc.email)}
+                  className={`w-full p-3 rounded-xl border flex items-center justify-between transition-all group cursor-pointer ${
+                    isLight
+                      ? 'bg-slate-50 hover:bg-slate-100/90 border-slate-200/90 shadow-sm'
+                      : 'bg-[#18181f] hover:bg-[#20202b] border-white/10'
+                  }`}
+                >
+                  <div className="flex items-center space-x-3 text-left">
+                    <div className={`w-9 h-9 rounded-full ${acc.color} text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-sm`}>
+                      {acc.avatar}
+                    </div>
+                    <div>
+                      <div className={`text-xs font-bold ${isLight ? 'text-slate-900' : 'text-white'}`}>
+                        {acc.name}
+                      </div>
+                      <div className={`text-[11px] ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                        {acc.email}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-1 text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 group-hover:translate-x-0.5 transition-transform">
+                    <span>{isLoading ? 'Signing in...' : 'Sign in'}</span>
+                    <UserCheck className="w-3.5 h-3.5" />
+                  </div>
+                </button>
+              ))}
+
+              {/* Add / Custom Account Button */}
               <button
                 disabled={isLoading}
-                onClick={() => handleGoogleSignIn('Thrishal Yeggoni', defaultEmail)}
-                className={`w-full p-3.5 rounded-xl border flex items-center justify-between transition-all group ${
+                onClick={() => {
+                  setIsCustomMode(true);
+                  setCustomName('');
+                  setCustomEmail('');
+                }}
+                className={`w-full py-2.5 px-4 rounded-xl font-medium text-xs transition-all flex items-center justify-center space-x-2 border border-dashed cursor-pointer ${
                   isLight
-                    ? 'bg-slate-50 hover:bg-slate-100 border-slate-200 shadow-sm'
-                    : 'bg-[#18181f] hover:bg-[#20202a] border-white/10'
+                    ? 'border-slate-300 text-slate-700 hover:bg-slate-50'
+                    : 'border-white/20 text-slate-300 hover:bg-white/5'
                 }`}
               >
-                <div className="flex items-center space-x-3 text-left">
-                  <div className="w-10 h-10 rounded-full bg-indigo-600 text-white font-bold text-sm flex items-center justify-center shrink-0 shadow-md">
-                    TY
-                  </div>
-                  <div>
-                    <div className={`text-xs font-bold ${isLight ? 'text-slate-900' : 'text-white'}`}>
-                      Thrishal Yeggoni
-                    </div>
-                    <div className={`text-[11px] ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
-                      {defaultEmail}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center space-x-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 group-hover:translate-x-0.5 transition-transform">
-                  <span>Continue</span>
-                  <UserCheck className="w-4 h-4" />
-                </div>
-              </button>
-
-              {/* Official Google Sign-In Primary Button */}
-              <button
-                disabled={isLoading}
-                onClick={() => handleGoogleSignIn('Google Developer', 'developer@gmail.com')}
-                className="w-full py-3 px-4 rounded-xl font-medium text-xs text-slate-700 bg-white hover:bg-slate-50 border border-slate-300 shadow-sm flex items-center justify-center space-x-2.5 transition-all"
-              >
-                <svg className="w-4 h-4" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
                   <path
                     fill="#4285F4"
                     d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"
@@ -157,20 +190,8 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({
                     d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.36 0 3.26 2.61 1.24 6.58l4.04 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
                   />
                 </svg>
-                <span>{isLoading ? 'Signing in...' : 'Sign in as Another Google Account'}</span>
+                <span>Use another Google account</span>
               </button>
-
-              <div className="text-center pt-1">
-                <button
-                  type="button"
-                  onClick={() => setIsCustomMode(true)}
-                  className={`text-[11px] hover:underline ${
-                    isLight ? 'text-indigo-600' : 'text-indigo-400'
-                  }`}
-                >
-                  Enter custom Google email & name
-                </button>
-              </div>
             </div>
           ) : (
             <form

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { DryRunResponse, DryRunStep } from '../types';
+import { StackFrameAnimator } from './StackFrameAnimator';
 import {
   Play,
   Pause,
@@ -15,11 +16,13 @@ import {
 interface DryRunPlayerProps {
   dryRunData: DryRunResponse | null;
   onStepChange?: (lineNumber: number) => void;
+  theme?: 'dark' | 'light';
 }
 
 export const DryRunPlayer: React.FC<DryRunPlayerProps> = ({
   dryRunData,
   onStepChange,
+  theme = 'dark',
 }) => {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -171,6 +174,16 @@ export const DryRunPlayer: React.FC<DryRunPlayerProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Interactive Stack Frame & Pointer Animator */}
+      {currentStep && (
+        <StackFrameAnimator
+          variables={currentStep.variables || {}}
+          lineNumber={currentStep.lineNumber}
+          lineContent={currentStep.lineContent}
+          theme={theme}
+        />
+      )}
 
       {/* Step Explanation & Variable Watch Split */}
       {currentStep && (

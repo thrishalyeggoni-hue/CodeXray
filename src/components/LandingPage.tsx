@@ -108,23 +108,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         </div>
 
         <div className="text-center space-y-6 relative z-10 max-w-4xl mx-auto">
-          {/* Badge */}
-          <div className={`inline-flex items-center space-x-2 px-4 py-1.5 rounded-full border text-xs shadow-md ${
-            isLight
-              ? 'bg-white border-slate-300 text-indigo-700'
-              : 'bg-[#0e0e10] border-white/10 text-indigo-300'
-          }`}>
-            <Sparkles className="w-3.5 h-3.5 text-indigo-500 animate-pulse" />
-            <span>AI Code Understanding Studio</span>
-            <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
-          </div>
-
           {/* Headline */}
           <h1 className={`text-4xl sm:text-6xl font-extrabold tracking-tight leading-tight ${
             isLight ? 'text-slate-900' : 'text-white'
           }`}>
             Understand Code.{' '}
-            <span className="bg-gradient-to-r from-indigo-600 via-indigo-500 to-indigo-700 dark:from-indigo-300 dark:via-indigo-400 dark:to-indigo-200 bg-clip-text text-transparent font-serif italic">
+            <span className="bg-gradient-to-r from-[#1a73e8] via-[#8ab4f8] via-[#a142f4] via-[#ec4899] to-[#00d2ff] bg-clip-text text-transparent italic font-serif">
               Don't Just Copy It.
             </span>
           </h1>
@@ -133,17 +122,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           <p className={`text-base sm:text-lg leading-relaxed max-w-2xl mx-auto ${
             isLight ? 'text-slate-600' : 'text-slate-400'
           }`}>
-            Deeply Xray any algorithm with our featured <strong className={isLight ? 'text-slate-900' : 'text-white'}>Python Tutor Memory Engine</strong>, stack frame diagrams, dry run traces, and interview prep.
+            Deeply Xray any algorithm powered by <strong className="bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">Google Gemini AI</strong> with our featured Python Tutor Memory Engine, stack frame diagrams, dry run traces, and interview prep.
           </p>
 
           {/* CTA Buttons */}
           <div className="flex flex-wrap items-center justify-center gap-4 pt-4">
             <button
               onClick={onLaunchDashboard}
-              className="flex items-center space-x-2.5 px-8 py-3.5 rounded-full bg-indigo-600/90 hover:bg-indigo-500 text-white font-semibold text-sm shadow-xl shadow-indigo-500/30 border border-indigo-400/40 backdrop-blur-md hover:scale-105 transition-all duration-200"
+              className="flex items-center space-x-2.5 px-8 py-3.5 rounded-full bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-medium text-sm shadow-lg shadow-indigo-500/20 backdrop-blur-md hover:scale-105 transition-all duration-200 cursor-pointer"
             >
-              <span>Launch Code Studio</span>
-              <ArrowRight className="w-4 h-4" />
+              <span>Launch Studio</span>
+              <Sparkles className="w-4 h-4 text-indigo-200" />
             </button>
 
             <button
@@ -154,7 +143,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   : 'bg-white/5 border-white/15 text-slate-200 hover:bg-white/10'
               }`}
             >
-              <Play className="w-3.5 h-3.5 text-indigo-500 fill-indigo-500" />
+              <Play className="w-3.5 h-3.5 text-cyan-400 fill-cyan-400" />
               <span>Try Binary Search Demo</span>
             </button>
 
@@ -182,13 +171,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         {/* FEATURED HIGHLIGHT SPOTLIGHT: Python Tutor Memory Visualizer */}
         <div className={`mt-12 max-w-5xl mx-auto rounded-2xl border p-6 sm:p-8 relative shadow-2xl overflow-hidden ${
           isLight
-            ? 'bg-gradient-to-br from-indigo-50 via-white to-cyan-50 border-indigo-200'
-            : 'bg-gradient-to-br from-[#12121b] via-[#0e0e12] to-[#0a1218] border-indigo-500/30'
+            ? 'bg-gradient-to-br from-blue-50 via-white to-purple-50 border-blue-200'
+            : 'bg-gradient-to-br from-[#0c0d18] via-[#090a12] to-[#120e20] border-purple-500/30'
         }`}>
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="space-y-3 text-left max-w-xl">
-              <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-indigo-600/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 text-xs font-bold uppercase tracking-wider">
-                <MonitorPlay className="w-3.5 h-3.5" />
+              <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-gradient-to-r from-blue-500/10 to-purple-500/10 text-cyan-300 border border-cyan-500/20 text-xs font-bold uppercase tracking-wider">
+                <MonitorPlay className="w-3.5 h-3.5 text-cyan-400" />
                 <span>Featured Engine: Python Tutor Step Visualizer</span>
               </div>
               <h2 className={`text-2xl sm:text-3xl font-extrabold ${isLight ? 'text-slate-900' : 'text-white'}`}>
@@ -218,9 +207,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
             {/* Visualizer Interactive Badge */}
             <div className={`p-5 rounded-xl border text-center space-y-3 shrink-0 ${
-              isLight ? 'bg-white border-slate-200 shadow-md' : 'bg-[#15151c] border-white/10'
+              isLight ? 'bg-white border-slate-200 shadow-md' : 'bg-[#12131e] border-white/10'
             }`}>
-              <div className="w-12 h-12 rounded-xl bg-indigo-600 text-white flex items-center justify-center mx-auto shadow-lg shadow-indigo-500/30">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 text-white flex items-center justify-center mx-auto shadow-lg shadow-purple-500/30">
                 <Network className="w-6 h-6 animate-pulse" />
               </div>
               <div>
@@ -229,7 +218,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               </div>
               <button
                 onClick={onLaunchDashboard}
-                className="w-full py-2 px-4 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs shadow-md transition-all flex items-center justify-center space-x-1.5"
+                className="w-full py-2 px-4 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-semibold text-xs shadow-md transition-all flex items-center justify-center space-x-1.5"
               >
                 <MonitorPlay className="w-3.5 h-3.5" />
                 <span>Open Visualizer</span>
@@ -425,10 +414,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </p>
           <button
             onClick={onLaunchDashboard}
-            className="inline-flex items-center space-x-2.5 px-8 py-3.5 rounded-full bg-indigo-600/90 hover:bg-indigo-500 text-white font-semibold text-sm shadow-xl shadow-indigo-500/30 border border-indigo-400/40 backdrop-blur-md hover:scale-105 transition-all"
+            className="inline-flex items-center space-x-2.5 px-8 py-3.5 rounded-full bg-gradient-to-r from-[#1a73e8] via-[#7c3aed] to-[#db2777] hover:from-[#2b7de9] hover:to-[#ec4899] text-white font-semibold text-sm shadow-xl shadow-purple-500/30 border border-purple-400/40 backdrop-blur-md hover:scale-105 transition-all"
           >
             <span>Launch Code Studio Free</span>
-            <ArrowRight className="w-4 h-4" />
+            <Sparkles className="w-4 h-4 text-amber-200 animate-pulse" />
           </button>
         </div>
       </section>
