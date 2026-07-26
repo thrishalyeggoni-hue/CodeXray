@@ -4,6 +4,8 @@ import { LandingPage } from './components/LandingPage';
 import { Dashboard } from './components/Dashboard';
 import { GoogleAuthModal } from './components/GoogleAuthModal';
 import { GoogleUser } from './types';
+import { auth, signOutUser } from './lib/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
 
 export default function App() {
   const [currentView, setCurrentView] = useState<'landing' | 'dashboard'>('landing');
@@ -48,6 +50,28 @@ export default function App() {
     }
   }, [theme]);
 
+  // Sync Firebase Auth state changes
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (fbUser) => {
+      if (fbUser) {
+        const mappedUser: GoogleUser = {
+          id: fbUser.uid,
+          sub: fbUser.uid,
+          name: fbUser.displayName || 'Google User',
+          email: fbUser.email || 'thrishalyeggoni@gmail.com',
+          picture: fbUser.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(fbUser.displayName || 'firebase')}`,
+          emailVerified: fbUser.emailVerified,
+          signedInAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          authType: 'firebase_auth_google',
+        };
+        setUser(mappedUser);
+        localStorage.setItem('codexray_google_user', JSON.stringify(mappedUser));
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
   const toggleTheme = () => {
     setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
   };
@@ -67,7 +91,12 @@ export default function App() {
     localStorage.setItem('codexray_google_user', JSON.stringify(newUser));
   };
 
-  const handleSignOut = () => {
+  const handleSignOut = async () => {
+    try {
+      await signOutUser();
+    } catch (err) {
+      console.warn('Firebase sign out warning:', err);
+    }
     setUser(null);
     localStorage.removeItem('codexray_google_user');
   };

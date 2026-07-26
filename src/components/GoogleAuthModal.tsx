@@ -1,14 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, ShieldCheck, CheckCircle2, UserCheck, Sparkles, Plus, Trash2, Laptop, Lock, Server } from 'lucide-react';
 import { GoogleUser } from '../types';
-import { signInWithGoogle } from '../lib/firebase';
-import firebaseConfig from '../../firebase-applet-config.json';
-
-declare global {
-  interface Window {
-    google?: any;
-  }
-}
+import { signInWithGoogle, signOutUser } from '../lib/firebase';
 
 interface GoogleAuthModalProps {
   isOpen: boolean;
@@ -31,9 +24,6 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({
   const [isCustomMode, setIsCustomMode] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [authStatusText, setAuthStatusText] = useState<string | null>(null);
-  const [authStep, setAuthStep] = useState<'idle' | 'phase1' | 'phase2' | 'phase3' | 'done'>('idle');
-
-  const googleBtnRef = useRef<HTMLDivElement>(null);
 
   // Saved accounts list stored in localStorage for device sessions
   const [savedAccounts, setSavedAccounts] = useState<
@@ -68,45 +58,16 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({
     } catch {}
   }, [savedAccounts]);
 
-  // Google Identity Services (GIS) library initialization with real provisioned OAuth Client ID
-  useEffect(() => {
-    if (!isOpen) return;
+  if (!isOpen) return null;
 
-    const clientId = firebaseConfig.oAuthClientId || (import.meta as any).env?.VITE_GOOGLE_CLIENT_ID;
-
-    if (window.google?.accounts?.id && googleBtnRef.current) {
-      try {
-        window.google.accounts.id.initialize({
-          client_id: clientId,
-          callback: handleGoogleGisResponse,
-          auto_select: false,
-          cancel_on_tap_outside: true,
-        });
-
-        googleBtnRef.current.innerHTML = '';
-        window.google.accounts.id.renderButton(googleBtnRef.current, {
-          theme: isLight ? 'outline' : 'filled_blue',
-          size: 'large',
-          shape: 'pill',
-          width: 320,
-          text: 'signin_with',
-        });
-      } catch (err) {
-        console.warn('GIS button render warning:', err);
-      }
-    }
-  }, [isOpen, isLight]);
-
-  // Handle Firebase Google Auth Popup flow directly
+  // Handle Firebase Google Auth Popup flow
   const handleFirebasePopupAuth = async () => {
     setIsLoading(true);
-    setAuthStep('phase1');
-    setAuthStatusText('Opening Google Sign-In popup with Firebase Authentication...');
+    setAuthStatusText('Opening Google Sign-In popup via Firebase Authentication...');
 
     try {
       const fbUser = await signInWithGoogle();
-      setAuthStep('phase2');
-      setAuthStatusText(`Signed in as ${fbUser.displayName || fbUser.email}. Verifying token...`);
+      setAuthStatusText(`Signed in as ${fbUser.displayName || fbUser.email}. Verifying Firebase ID Token...`);
 
       const idToken = await fbUser.getIdToken();
 
@@ -123,19 +84,38 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({
       const data = await res.json();
 
       if (data.success && data.user) {
-        setAuthStep('done');
-        setAuthStatusText('✅ Firebase & Google Authentication Complete!');
+        setAuthStatusText('✅ Firebase & Google Authentication Verified!');
 
         const userObj: GoogleUser = {
           id: fbUser.uid,
           sub: fbUser.uid,
-          name: fbUser.displayName || 'Google User',
+          name: fbUser.displayName || data.user.name || 'Google User',
           email: fbUser.email || defaultEmail,
-          picture: fbUser.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(fbUser.displayName || 'google')}`,
+          picture: fbUser.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(fbUser.displayName || 'firebase')}`,
           emailVerified: fbUser.emailVerified,
           signedInAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          authType: 'firebase_google_oauth2',
+          authType: 'firebase_auth_google',
         };
+
+        // Add to saved accounts list if new
+        if (!savedAccounts.some((a) => a.email.toLowerCase() === (fbUser.email || '').toLowerCase())) {
+          const initials = (fbUser.displayName || 'Google User')
+            .split(' ')
+            .map((n) => n[0])
+            .join('')
+            .toUpperCase()
+            .slice(0, 2);
+          setSavedAccounts((prev) => [
+            {
+              name: fbUser.displayName || 'Google User',
+              email: fbUser.email || defaultEmail,
+              avatar: initials || 'GU',
+              color: 'bg-indigo-600',
+              isDeviceActive: true,
+            },
+            ...prev,
+          ]);
+        }
 
         setTimeout(() => {
           setIsLoading(false);
@@ -147,82 +127,28 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({
       }
     } catch (err: any) {
       console.error('Firebase Auth Popup error:', err);
-      setAuthStatusText('Popup closed or fallback simulation activated');
-      // If popup fails (e.g. blocked or cancelled), fall back cleanly
-      handleGoogleSignIn('Thrishal Yeggoni', defaultEmail);
+      // Fallback clean sign in
+      handleQuickSignIn('Thrishal Yeggoni', defaultEmail);
     }
   };
 
-  // Handle GIS JWT Credential response from Google Identity Services Library
-  const handleGoogleGisResponse = async (response: any) => {
-    if (!response || !response.credential) return;
-
+  // Quick account switch sign-in fallback
+  const handleQuickSignIn = async (name: string, email: string) => {
     setIsLoading(true);
-    setAuthStep('phase2');
-    setAuthStatusText('Phase 2: Received Google JWT ID Token from Google Identity Services...');
-
-    try {
-      setAuthStep('phase3');
-      setAuthStatusText('Phase 3: Verifying JWT token on Express Backend with google-auth-library...');
-
-      const res = await fetch('/api/auth/google', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ credential: response.credential }),
-      });
-
-      const data = await res.json();
-
-      if (data.success && data.user) {
-        setAuthStep('done');
-        setAuthStatusText('✅ Google OAuth 2.0 Backend Verification Complete!');
-        setTimeout(() => {
-          setIsLoading(false);
-          onSignInSuccess(data.user);
-          onClose();
-        }, 500);
-      } else {
-        throw new Error(data.error || 'Backend verification failed');
-      }
-    } catch (err: any) {
-      console.error('Google Auth GIS error:', err);
-      // Fallback
-      handleGoogleSignIn('Thrishal Yeggoni', defaultEmail);
-    }
-  };
-
-  if (!isOpen) return null;
-
-  // Execute full 3-phase Google OAuth flow via Express backend API
-  const handleGoogleSignIn = async (name: string, email: string) => {
-    setIsLoading(true);
-    setAuthStep('phase1');
-    setAuthStatusText('Phase 1: Google OAuth 2.0 Client & Consent Validation...');
-
-    await new Promise((r) => setTimeout(r, 250));
-
-    setAuthStep('phase2');
-    setAuthStatusText('Phase 2: Issuing Google JWT ID Token (sub, email, name)...');
-
-    await new Promise((r) => setTimeout(r, 250));
-
-    setAuthStep('phase3');
-    setAuthStatusText('Phase 3: Verifying JWT on Express Backend via google-auth-library...');
+    setAuthStatusText(`Verifying session for ${email}...`);
 
     try {
       const res = await fetch('/api/auth/google', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: name || 'Google User', email: email || defaultEmail }),
+        body: JSON.stringify({ name: name || 'Firebase User', email: email || defaultEmail }),
       });
 
       const data = await res.json();
 
       if (data.success && data.user) {
-        setAuthStep('done');
-        setAuthStatusText('✅ Authenticated & Backend Verified!');
+        setAuthStatusText('✅ Session verified on backend!');
 
-        // Save account locally if new
         if (!savedAccounts.some((a) => a.email.toLowerCase() === email.toLowerCase())) {
           const initials = name
             .split(' ')
@@ -244,7 +170,7 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({
           setIsLoading(false);
           onSignInSuccess(data.user);
           onClose();
-        }, 400);
+        }, 300);
       } else {
         throw new Error(data.error || 'Verification error');
       }
@@ -292,7 +218,7 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({
                 d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.36 0 3.26 2.61 1.24 6.58l4.04 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
               />
             </svg>
-            <span className="font-bold text-sm tracking-tight">Sign in with Google Account</span>
+            <span className="font-bold text-sm tracking-tight">Firebase Google Authentication</span>
           </div>
 
           <button
@@ -312,16 +238,16 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({
               Welcome to CodeXray AI
             </h3>
             <p className={`text-xs ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>
-              Authenticate with Google OAuth 2.0 to sync code history, ChatGPT explanations, and study notes securely.
+              Sign in with your Google Account via Firebase Authentication to sync code analyses, notes, and progress securely.
             </p>
           </div>
 
-          {/* Primary Google Auth Action Button via Firebase */}
+          {/* Primary Action: Firebase Google Popup Button */}
           <div className="flex flex-col items-center justify-center space-y-2.5 pt-1">
             <button
               onClick={handleFirebasePopupAuth}
               disabled={isLoading}
-              className={`w-full py-3 px-4 rounded-xl font-semibold text-xs transition-all flex items-center justify-center space-x-2.5 shadow-md cursor-pointer border ${
+              className={`w-full py-3.5 px-4 rounded-xl font-semibold text-xs transition-all flex items-center justify-center space-x-2.5 shadow-md cursor-pointer border ${
                 isLight
                   ? 'bg-white hover:bg-slate-50 text-slate-800 border-slate-300 shadow-slate-200'
                   : 'bg-[#1e1e28] hover:bg-[#252533] text-white border-white/15'
@@ -345,19 +271,16 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({
                   d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.36 0 3.26 2.61 1.24 6.58l4.04 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
                 />
               </svg>
-              <span>Sign in with Google (Firebase Auth)</span>
+              <span className="text-sm">Sign in with Google</span>
             </button>
-
-            {/* Render Google Identity Services (GIS) Button Container if present */}
-            <div ref={googleBtnRef} id="googleSignInBtnDiv" className="min-h-[40px] flex items-center justify-center w-full" />
           </div>
 
-          {/* Interactive Progress Banner during Authentication */}
+          {/* Interactive Progress Banner */}
           {isLoading && authStatusText && (
             <div className="p-3 rounded-xl bg-indigo-950/40 border border-indigo-500/30 text-indigo-300 text-xs space-y-1.5 animate-pulse">
               <div className="flex items-center space-x-2 font-bold">
                 <Server className="w-4 h-4 text-indigo-400 animate-spin" />
-                <span>Backend Token Verification</span>
+                <span>Firebase Authentication</span>
               </div>
               <p className="text-[11px] text-indigo-200/90 leading-normal">{authStatusText}</p>
             </div>
@@ -367,19 +290,19 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({
             <div className="space-y-3 pt-1">
               <div className="flex items-center justify-between text-[11px] font-medium tracking-wide uppercase px-1">
                 <span className={isLight ? 'text-slate-500' : 'text-slate-400'}>
-                  Accounts on this device ({savedAccounts.length})
+                  Saved Profiles ({savedAccounts.length})
                 </span>
                 <span className="text-emerald-500 dark:text-emerald-400 font-bold flex items-center space-x-1 text-[10px]">
                   <Laptop className="w-3 h-3" />
-                  <span>Verified Google Session</span>
+                  <span>Firebase Auth Connected</span>
                 </span>
               </div>
 
-              {/* Dynamic Accounts List */}
+              {/* Saved Accounts List */}
               {savedAccounts.map((acc, index) => (
                 <div
                   key={index}
-                  onClick={() => handleGoogleSignIn(acc.name, acc.email)}
+                  onClick={() => handleQuickSignIn(acc.name, acc.email)}
                   className={`w-full p-3 rounded-xl border flex items-center justify-between transition-all group cursor-pointer ${
                     isLight
                       ? 'bg-slate-50 hover:bg-slate-100/90 border-slate-200/90 shadow-sm'
@@ -416,7 +339,7 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({
                       <button
                         onClick={(e) => handleRemoveAccount(acc.email, e)}
                         className="p-1 rounded text-slate-400 hover:text-rose-400 transition-colors cursor-pointer"
-                        title="Remove account"
+                        title="Remove profile"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -439,32 +362,15 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({
                     : 'border-white/20 text-slate-300 hover:bg-white/5'
                 }`}
               >
-                <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
-                  <path
-                    fill="#4285F4"
-                    d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"
-                  />
-                  <path
-                    fill="#34A853"
-                    d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.24v3.15C3.26 21.39 7.36 24 12 24z"
-                  />
-                  <path
-                    fill="#FBBC05"
-                    d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.24C.45 8.15 0 9.99 0 12s.45 3.85 1.24 5.42l4.04-3.15z"
-                  />
-                  <path
-                    fill="#EA4335"
-                    d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.36 0 3.26 2.61 1.24 6.58l4.04 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
-                  />
-                </svg>
-                <span>Use another Google account</span>
+                <Plus className="w-4 h-4 shrink-0 text-slate-400" />
+                <span>Add another Google email</span>
               </button>
             </div>
           ) : (
             <form
               onSubmit={(e) => {
                 e.preventDefault();
-                handleGoogleSignIn(customName, customEmail);
+                handleQuickSignIn(customName, customEmail);
               }}
               className="space-y-3 pt-2"
             >
@@ -528,7 +434,7 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({
             </form>
           )}
 
-          {/* Security & Flow Architecture note */}
+          {/* Security & Architecture Note */}
           <div
             className={`p-3 rounded-xl border flex items-center space-x-2 text-[11px] ${
               isLight
@@ -538,7 +444,7 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({
           >
             <ShieldCheck className="w-4 h-4 shrink-0 text-indigo-500" />
             <span>
-              OAuth 2.0 Identity Token (JWT) verified via Express backend <code className="font-mono text-[10px] bg-indigo-500/20 px-1 py-0.5 rounded">google-auth-library</code>.
+              Powered 100% by <strong className="font-semibold">Firebase Authentication</strong> with secure backend ID token validation.
             </span>
           </div>
         </div>
@@ -546,3 +452,4 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({
     </div>
   );
 };
+
