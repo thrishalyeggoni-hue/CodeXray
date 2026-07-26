@@ -17,8 +17,6 @@ export const IntroSplash: React.FC<IntroSplashProps> = ({ onComplete, forcePlay 
   const taglineRef = useRef<HTMLDivElement>(null);
   const symbolsGroupRef = useRef<HTMLDivElement>(null);
   const symbolRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const particleRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const trailRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   const codeLetters = ['C', 'o', 'd', 'e'];
   const xrayLetters = ['X', 'r', 'a', 'y'];
@@ -77,18 +75,6 @@ export const IntroSplash: React.FC<IntroSplashProps> = ({ onComplete, forcePlay 
           rotation: 0,
           filter: 'blur(4px)',
         });
-      });
-
-      // Light trails initial
-      trailRefs.current.forEach((tr) => {
-        if (!tr) return;
-        gsap.set(tr, { opacity: 0, scale: 0 });
-      });
-
-      // Spark Particles initial
-      particleRefs.current.forEach((pt) => {
-        if (!pt) return;
-        gsap.set(pt, { x: 0, y: 0, opacity: 0, scale: 0 });
       });
 
       // ----------------------------------------------------
@@ -342,120 +328,69 @@ export const IntroSplash: React.FC<IntroSplashProps> = ({ onComplete, forcePlay 
         );
       });
 
-      // 4.22s - 4.95s: EXPLOSIVE BURST & GRAVITY FALL TRANSITION
+      // 4.22s - 4.95s: PHYSICAL EXPLOSIVE BURST & GRAVITY FALL TRANSITION
       symbolRefs.current.forEach((sym, index) => {
         if (!sym) return;
         const pos = finalPositions[index];
         const releaseAngle = pos.theta;
 
-        // Random organic physical variations
-        const jumpDist = 150 + (index % 3) * 25; // Instant outward explosion impulse
-        const jumpX = pos.x + Math.cos(releaseAngle) * jumpDist;
-        const jumpY = pos.y + Math.sin(releaseAngle) * jumpDist - 35; // Initial upward/outward force arc
+        // Independent random trajectory angle and burst speed for each symbol (Math.random)
+        const angleSpread = (Math.random() - 0.5) * 0.85;
+        const trajectoryAngle = releaseAngle + angleSpread;
+        const impulseSpeed = 220 + Math.random() * 140;
 
-        const fallGravityY = jumpY + 420 + (index % 2) * 60; // Downward acceleration under gravity
-        const fallDriftX = jumpX + Math.cos(releaseAngle) * 90; // Natural momentum continuation
-        const spinAmount = (index % 2 === 0 ? 380 : -380) + (index * 45); // Spin while tumbling
+        // Instant velocity impulse coordinates (X, Y)
+        const burstX = pos.x + Math.cos(trajectoryAngle) * impulseSpeed;
+        const burstY = pos.y + Math.sin(trajectoryAngle) * impulseSpeed - (50 + Math.random() * 60);
 
-        // Animate light trail burst
-        const trail = trailRefs.current[index];
-        if (trail) {
-          gsap.set(trail, {
-            x: pos.x,
-            y: pos.y,
-            rotation: (releaseAngle * 180) / Math.PI,
-            opacity: 0.9,
-            scaleX: 0.2,
-            scaleY: 0.8,
-          });
+        // Gravity decay effect: downward arc acceleration and momentum continuation
+        const gravityFallX = burstX + Math.cos(trajectoryAngle) * (90 + Math.random() * 70);
+        const gravityFallY = burstY + 520 + Math.random() * 160;
 
-          masterTl.to(
-            trail,
-            {
-              x: jumpX,
-              y: jumpY,
-              scaleX: 3.2,
-              scaleY: 0.15,
-              opacity: 0.7,
-              duration: 0.18,
-              ease: 'expo.out',
-            },
-            4.22
-          ).to(
-            trail,
-            {
-              x: fallDriftX,
-              y: fallGravityY,
-              opacity: 0,
-              scaleX: 0.1,
-              duration: 0.48,
-              ease: 'power2.in',
-            },
-            4.40
-          );
-        }
+        // Independent random angular spin
+        const randomSpin = (Math.random() > 0.5 ? 1 : -1) * (360 + Math.random() * 400);
 
-        // 1. Sudden Explosive Jump Outward (4.22s -> 4.40s)
+        // 1. Initial Explosive Outward Impulse (POP!) - Immediate velocity, scale stays 1.0, 100% visible
         masterTl.to(
           sym,
           {
-            x: jumpX,
-            y: jumpY,
-            scale: 1.25, // Brief surge in scale on explosion
-            opacity: 1,
-            rotation: `+=${spinAmount * 0.35}`,
+            x: burstX,
+            y: burstY,
+            scale: 1.0,
+            opacity: 1, // 100% visible
+            rotation: `+=${randomSpin * 0.35}`,
             filter: 'blur(0px)',
-            duration: 0.18,
-            ease: 'expo.out',
-          },
-          4.22
-        );
-
-        // 2. Momentum Loss & Gravity Fall Downward with Spin (4.40s -> 4.90s)
-        masterTl.to(
-          sym,
-          {
-            x: fallDriftX,
-            y: fallGravityY,
-            scale: 0.4,
-            opacity: 0,
-            rotation: `+=${spinAmount * 0.65}`,
-            filter: 'blur(10px)',
-            duration: 0.50,
-            ease: 'power2.in',
-          },
-          4.40
-        );
-      });
-
-      // Spark Particles scatter along outward energy paths
-      particleRefs.current.forEach((pt, idx) => {
-        if (!pt) return;
-        const angle = (idx * Math.PI * 2) / 10;
-        const dist = 240 + (idx % 3) * 60;
-        const destX = Math.cos(angle) * dist;
-        const destY = Math.sin(angle) * dist + 150; // Gravity curve for sparks
-
-        masterTl.to(
-          pt,
-          {
-            x: destX,
-            y: destY,
-            scale: 1.3,
-            opacity: 1,
             duration: 0.16,
             ease: 'expo.out',
           },
           4.22
-        ).to(
-          pt,
+        );
+
+        // 2. Physics Gravity Arc: Natural momentum loss & gravity downward acceleration
+        masterTl.to(
+          sym,
           {
-            scale: 0,
-            opacity: 0,
-            duration: 0.42,
-            ease: 'power2.in',
+            x: gravityFallX,
+            y: burstY + 140, // Travel significant distance while remaining 100% visible
+            scale: 1.0,
+            opacity: 1, // Maintained visible through initial fall distance
+            rotation: `+=${randomSpin * 0.35}`,
+            duration: 0.22,
+            ease: 'power1.in',
           },
           4.38
+        ).to(
+          sym,
+          {
+            x: gravityFallX + Math.cos(trajectoryAngle) * 50,
+            y: gravityFallY, // Downward gravity decay curve
+            scale: 1.0,
+            opacity: 0, // Trigger opacity fade-out only after traveling a significant distance
+            rotation: `+=${randomSpin * 0.30}`,
+            duration: 0.32,
+            ease: 'power2.in', // Physics-based gravity decay with power2.in
+          },
+          4.60
         );
       });
 
@@ -568,26 +503,6 @@ export const IntroSplash: React.FC<IntroSplashProps> = ({ onComplete, forcePlay 
 
         {/* 4. 3D Orbiting AI Symbols around EMPTY CENTER Space */}
         <div className="relative w-[440px] h-[440px] flex items-center justify-center">
-          {/* Light Motion Trails (5 elements matching symbols) */}
-          {Array.from({ length: 5 }).map((_, i) => (
-            <div
-              key={`trail-${i}`}
-              ref={(el) => { trailRefs.current[i] = el; }}
-              className="absolute w-44 h-8 rounded-full blur-sm bg-gradient-to-r from-blue-400 via-cyan-300 to-transparent pointer-events-none z-10"
-            />
-          ))}
-
-          {/* Spark Particles Scatter (10 elements) */}
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-30">
-            {Array.from({ length: 10 }).map((_, i) => (
-              <div
-                key={`spark-${i}`}
-                ref={(el) => { particleRefs.current[i] = el; }}
-                className="absolute w-2.5 h-2.5 rounded-full bg-cyan-200 shadow-[0_0_14px_5px_rgba(56,189,248,0.95)]"
-              />
-            ))}
-          </div>
-
           {/* 5 Original Futuristic AI Symbols Group (NO center object - completely clean empty orbit center) */}
           <div ref={symbolsGroupRef} className="relative w-full h-full flex items-center justify-center">
             {/* Symbol 1: Code Matrix Node */}
