@@ -3,6 +3,7 @@ import { Navbar } from './components/Navbar';
 import { LandingPage } from './components/LandingPage';
 import { Dashboard } from './components/Dashboard';
 import { GoogleAuthModal } from './components/GoogleAuthModal';
+import { IntroSplash } from './components/IntroSplash';
 import { GoogleUser } from './types';
 import { auth, signOutUser } from './lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -14,6 +15,15 @@ export default function App() {
     const saved = localStorage.getItem('codexray_theme');
     return saved === 'light' ? 'light' : 'dark';
   });
+
+  // Replay Intro State
+  const [splashKey, setSplashKey] = useState(0);
+  const [forcePlaySplash, setForcePlaySplash] = useState(false);
+
+  const handleReplayIntro = () => {
+    setForcePlaySplash(true);
+    setSplashKey((prev) => prev + 1);
+  };
 
   // Google User Auth State
   const [user, setUser] = useState<GoogleUser | null>(() => {
@@ -98,6 +108,13 @@ export default function App() {
         ? 'bg-[#f8fafd] text-slate-800 selection:bg-blue-500/20 selection:text-blue-900 bg-grid-pattern-light'
         : 'bg-[#080912] text-slate-100 selection:bg-purple-500/30 selection:text-purple-200 bg-grid-pattern'
     }`}>
+      {/* Intro / Splash Screen Overlay */}
+      <IntroSplash
+        key={splashKey}
+        forcePlay={forcePlaySplash}
+        onComplete={() => setForcePlaySplash(false)}
+      />
+
       {/* Dynamic Gemini Aurora Background Glow Blobs */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
         <div className={`absolute -top-32 -left-32 w-96 h-96 rounded-full blur-[120px] animate-pulse-glow ${
@@ -132,6 +149,7 @@ export default function App() {
           user={user}
           onOpenLogin={() => setIsLoginModalOpen(true)}
           onSignOut={handleSignOut}
+          onReplayIntro={handleReplayIntro}
         />
 
         <main className="transition-all duration-300">

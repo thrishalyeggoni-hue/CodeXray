@@ -24,6 +24,7 @@ interface NavbarProps {
   user?: GoogleUser | null;
   onOpenLogin?: () => void;
   onSignOut?: () => void;
+  onReplayIntro?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -35,6 +36,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   user,
   onOpenLogin,
   onSignOut,
+  onReplayIntro,
 }) => {
   const isLight = theme === 'light';
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -195,6 +197,21 @@ export const Navbar: React.FC<NavbarProps> = ({
                       <User className="w-3.5 h-3.5 text-indigo-500" />
                       <span>Code Studio & History</span>
                     </button>
+
+                    {onReplayIntro && (
+                      <button
+                        onClick={() => {
+                          setShowUserMenu(false);
+                          onReplayIntro();
+                        }}
+                        className={`w-full flex items-center space-x-2 px-3 py-1.5 rounded-full text-xs transition-colors cursor-pointer ${
+                          isLight ? 'hover:bg-slate-100 text-slate-700' : 'hover:bg-white/10 text-slate-300'
+                        }`}
+                      >
+                        <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+                        <span>Replay Intro Animation</span>
+                      </button>
+                    )}
 
                     <button
                       onClick={() => {
