@@ -711,11 +711,11 @@ ${notesData.cheatSheetSummary}
         {/* ChatGPT AI Code Explanation & Logic Breakdown */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <h4 className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider flex items-center space-x-2">
+            <h4 className="text-xs font-extrabold text-indigo-900 dark:text-indigo-300 uppercase tracking-wider flex items-center space-x-2">
               <Sparkles className="w-3.5 h-3.5 text-amber-500 animate-pulse" />
-              <span>2. ChatGPT AI Code Explanation & Logic Breakdown</span>
+              <span className="text-indigo-900 dark:text-indigo-300 font-bold">2. ChatGPT AI Code Explanation & Logic Breakdown</span>
             </h4>
-            <span className="px-2.5 py-0.5 rounded-full bg-gradient-to-r from-purple-500/10 to-indigo-500/10 border border-indigo-500/20 text-indigo-600 dark:text-indigo-300 text-[10px] font-mono font-semibold">
+            <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-900 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-500/30 text-[10px] font-mono font-bold">
               ChatGPT Output
             </span>
           </div>
@@ -994,11 +994,11 @@ ${notesData.cheatSheetSummary}
               <div className="flex items-center space-x-2">
                 <button
                   onClick={() => setShowPreviewModal(false)}
-                  className="flex items-center space-x-1.5 px-3 py-1.5 rounded-full bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold transition-all border border-slate-700 shadow-sm cursor-pointer hover:border-indigo-400"
-                  title="Return to main notes view"
+                  className="flex items-center space-x-1.5 px-3.5 py-1.5 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all shadow-md cursor-pointer border border-indigo-400"
+                  title="Return to notes dashboard with all option controls"
                 >
-                  <ArrowLeft className="w-4 h-4 text-indigo-400" />
-                  <span>Back to Notes</span>
+                  <ArrowLeft className="w-4 h-4 text-white" />
+                  <span>Back to Options</span>
                 </button>
                 {onBackToStudio && (
                   <button
@@ -1006,10 +1006,10 @@ ${notesData.cheatSheetSummary}
                       setShowPreviewModal(false);
                       onBackToStudio();
                     }}
-                    className="flex items-center space-x-1.5 px-3 py-1.5 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all shadow-sm cursor-pointer"
+                    className="flex items-center space-x-1.5 px-3 py-1.5 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white text-xs font-semibold transition-all border border-slate-700 shadow-sm cursor-pointer"
                     title="Return directly to Code Studio Editor"
                   >
-                    <ArrowLeft className="w-4 h-4" />
+                    <ArrowLeft className="w-4 h-4 text-indigo-400" />
                     <span>Back to Code Studio</span>
                   </button>
                 )}
@@ -1054,6 +1054,21 @@ ${notesData.cheatSheetSummary}
 
             {/* Modal Body - Paper Document */}
             <div className="p-8 overflow-y-auto space-y-6 text-xs bg-white text-slate-900 leading-relaxed">
+              {/* Paper Top Navigation Bar */}
+              <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+                <button
+                  onClick={() => setShowPreviewModal(false)}
+                  className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold transition-all border border-indigo-200 shadow-xs cursor-pointer"
+                  title="Close document preview and return to option controls"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>← Exit Preview & Return to Options</span>
+                </button>
+                <span className="text-[11px] font-medium text-slate-500 font-mono">
+                  CodeXRay Exam Revision Sheet
+                </span>
+              </div>
+
               <div className="border-b-2 border-indigo-600 pb-3">
                 <span className="px-2.5 py-0.5 bg-indigo-100 text-indigo-800 text-[10px] font-bold rounded-full uppercase">
                   Exam & Interview Revision Notes

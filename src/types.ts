@@ -107,9 +107,12 @@ export interface SampleCode {
 
 export interface GoogleUser {
   id: string;
+  sub?: string;
   name: string;
   email: string;
   picture: string;
   signedInAt: string;
+  emailVerified?: boolean;
+  authType?: string;
 }
 

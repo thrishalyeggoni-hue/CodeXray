@@ -451,11 +451,17 @@ Break down the response logically:
                     : 'bg-slate-950/90 text-slate-200 border border-slate-800/80'
                 }`}
               >
-                <div className="flex items-center justify-between text-[11px] font-semibold opacity-80 pb-2 border-b border-white/10 dark:border-slate-800">
-                  <span className="flex items-center gap-1">
-                    {isUser ? 'You' : 'ChatGPT AI Assistant'}
+                <div className={`flex items-center justify-between text-[11px] font-bold pb-2 border-b ${
+                  isUser
+                    ? 'text-white/90 border-white/20'
+                    : isLight
+                      ? 'text-emerald-950 border-slate-200'
+                      : 'text-emerald-300 border-slate-800'
+                }`}>
+                  <span className="flex items-center gap-1.5 font-bold">
+                    {isUser ? 'You' : '✨ ChatGPT AI Assistant'}
                   </span>
-                  <span>{msg.timestamp}</span>
+                  <span className="opacity-75 font-mono text-[10px]">{msg.timestamp}</span>
                 </div>
 
                 {msg.codeSnippet && isUser && (

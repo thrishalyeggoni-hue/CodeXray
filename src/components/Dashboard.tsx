@@ -236,7 +236,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ initialSampleId, theme = '
     if (found) {
       setLanguage(found.language);
       setCode(found.code);
-      handleAnalyze(found.code, found.language);
     }
   };
 
@@ -665,17 +664,25 @@ export const Dashboard: React.FC<DashboardProps> = ({ initialSampleId, theme = '
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => setActiveTab('chatgpt')}
-              className={`flex items-center space-x-1.5 px-4 py-2 rounded-full border transition-all whitespace-nowrap font-medium text-xs backdrop-blur-md cursor-pointer ${
+              className={`flex items-center space-x-1.5 px-4 py-2 rounded-full border transition-all whitespace-nowrap text-xs backdrop-blur-md cursor-pointer ${
                 activeTab === 'chatgpt'
-                  ? 'bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 text-white border-emerald-400 shadow-sm'
+                  ? 'bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 text-white border-emerald-400 shadow-sm font-bold'
                   : isLight
-                    ? 'bg-white/70 text-slate-700 border-slate-300/60 hover:bg-white hover:border-slate-300'
+                    ? 'bg-white text-slate-900 border-slate-300 font-semibold shadow-xs hover:bg-slate-50'
                     : 'bg-white/5 text-slate-300 border-white/10 hover:bg-white/10 hover:border-white/20'
               }`}
             >
-              <Sparkles className="w-3.5 h-3.5 text-emerald-300 animate-pulse" />
-              <span>ChatGPT Code Explainer</span>
-              <span className="ml-1 px-1.5 py-0.5 text-[9px] font-semibold rounded-full uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
+              <Sparkles className={`w-3.5 h-3.5 ${activeTab === 'chatgpt' ? 'text-white' : isLight ? 'text-emerald-700 font-bold' : 'text-emerald-300'} animate-pulse`} />
+              <span className={activeTab === 'chatgpt' ? 'text-white font-bold' : isLight ? 'text-slate-900 font-bold' : 'text-slate-200'}>
+                ChatGPT Code Explainer
+              </span>
+              <span className={`ml-1 px-1.5 py-0.5 text-[9px] font-extrabold rounded-full uppercase border ${
+                activeTab === 'chatgpt'
+                  ? 'bg-white/25 text-white border-white/40'
+                  : isLight
+                    ? 'bg-emerald-100 text-emerald-800 border-emerald-400 font-bold'
+                    : 'bg-emerald-500/20 text-emerald-300 border-emerald-400/30'
+              }`}>
                 AI STEP-BY-STEP
               </span>
             </motion.button>
