@@ -16,10 +16,10 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({
   onClose,
   onSignInSuccess,
   theme = 'dark',
-  defaultEmail = 'thrishalyeggoni@gmail.com',
+  defaultEmail = '',
 }) => {
   const isLight = theme === 'light';
-  const [customName, setCustomName] = useState('Thrishal Yeggoni');
+  const [customName, setCustomName] = useState('');
   const [customEmail, setCustomEmail] = useState(defaultEmail);
   const [isCustomMode, setIsCustomMode] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -35,21 +35,7 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({
         return JSON.parse(stored);
       }
     } catch {}
-    return [
-      {
-        name: 'Thrishal Yeggoni',
-        email: defaultEmail,
-        avatar: 'TY',
-        color: 'bg-indigo-600',
-        isDeviceActive: true,
-      },
-      {
-        name: 'Thrishal Yeggoni (Dev)',
-        email: 'thrishal.developer@gmail.com',
-        avatar: 'TD',
-        color: 'bg-emerald-600',
-      },
-    ];
+    return [];
   });
 
   useEffect(() => {
@@ -90,7 +76,7 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({
           id: fbUser.uid,
           sub: fbUser.uid,
           name: fbUser.displayName || data.user.name || 'Google User',
-          email: fbUser.email || defaultEmail,
+          email: fbUser.email || '',
           picture: fbUser.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(fbUser.displayName || 'firebase')}`,
           emailVerified: fbUser.emailVerified,
           signedInAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -108,7 +94,7 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({
           setSavedAccounts((prev) => [
             {
               name: fbUser.displayName || 'Google User',
-              email: fbUser.email || defaultEmail,
+              email: fbUser.email || '',
               avatar: initials || 'GU',
               color: 'bg-indigo-600',
               isDeviceActive: true,
@@ -127,8 +113,12 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({
       }
     } catch (err: any) {
       console.error('Firebase Auth Popup error:', err);
-      // Fallback clean sign in
-      handleQuickSignIn('Thrishal Yeggoni', defaultEmail);
+      setIsLoading(false);
+      setAuthStatusText(
+        err.message?.includes('popup-closed-by-user')
+          ? 'Sign-in window was closed. Please click "Sign in with Google" to try again.'
+          : err.message || 'Google Sign-In failed or was cancelled.'
+      );
     }
   };
 

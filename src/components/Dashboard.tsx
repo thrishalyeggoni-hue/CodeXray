@@ -699,9 +699,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ initialSampleId, theme = '
                     : 'bg-white/5 text-slate-300 border-white/10 hover:bg-white/10 hover:border-white/20'
               }`}
             >
-              <MonitorPlay className="w-3.5 h-3.5 text-blue-400" />
+              <MonitorPlay className={`w-3.5 h-3.5 ${activeTab === 'pythontutor' ? 'text-white' : isLight ? 'text-blue-600' : 'text-blue-400'}`} />
               <span>Python Tutor Trace</span>
-              <span className="ml-1 px-1.5 py-0.5 text-[9px] font-semibold rounded-full uppercase bg-blue-500/20 text-blue-300 border border-blue-400/30">
+              <span className={`ml-1 px-1.5 py-0.5 text-[9px] font-extrabold rounded-full uppercase border ${
+                activeTab === 'pythontutor'
+                  ? 'bg-white/25 text-white border-white/40'
+                  : isLight
+                    ? 'bg-blue-100 text-blue-800 border-blue-300'
+                    : 'bg-blue-500/20 text-blue-300 border-blue-400/30'
+              }`}>
                 HOT
               </span>
             </motion.button>

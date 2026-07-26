@@ -25,16 +25,7 @@ export default function App() {
         // Fallback
       }
     }
-    // Default active Google session for Thrishal on laptop
-    const defaultUser: GoogleUser = {
-      id: 'google-user-thrishal',
-      name: 'Thrishal Yeggoni',
-      email: 'thrishalyeggoni@gmail.com',
-      picture: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Thrishal%20Yeggoni',
-      signedInAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    };
-    localStorage.setItem('codexray_google_user', JSON.stringify(defaultUser));
-    return defaultUser;
+    return null;
   });
 
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
@@ -58,7 +49,7 @@ export default function App() {
           id: fbUser.uid,
           sub: fbUser.uid,
           name: fbUser.displayName || 'Google User',
-          email: fbUser.email || 'thrishalyeggoni@gmail.com',
+          email: fbUser.email || '',
           picture: fbUser.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(fbUser.displayName || 'firebase')}`,
           emailVerified: fbUser.emailVerified,
           signedInAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
