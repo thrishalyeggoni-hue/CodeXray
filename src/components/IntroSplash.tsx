@@ -9,6 +9,8 @@ interface IntroSplashProps {
 export const IntroSplash: React.FC<IntroSplashProps> = ({ onComplete, forcePlay = false }) => {
   const [isVisible, setIsVisible] = useState<boolean>(true);
   const containerRef = useRef<HTMLDivElement>(null);
+  const maskCanvasRef = useRef<HTMLCanvasElement>(null);
+  const heroColumnRef = useRef<HTMLDivElement>(null);
   const ambientGlowRef = useRef<HTMLDivElement>(null);
   const titleMaskRef = useRef<HTMLDivElement>(null);
   const scanBeamRef = useRef<HTMLDivElement>(null);
@@ -22,6 +24,7 @@ export const IntroSplash: React.FC<IntroSplashProps> = ({ onComplete, forcePlay 
   const xrayLetters = ['X', 'r', 'a', 'y'];
   const codeLetterRefs = useRef<(HTMLSpanElement | null)[]>([]);
   const xrayLetterRefs = useRef<(HTMLSpanElement | null)[]>([]);
+  const geminiOverlayRefs = useRef<(HTMLSpanElement | null)[]>([]);
 
   useEffect(() => {
     // Prevent scrolling while overlay is active
@@ -43,18 +46,21 @@ export const IntroSplash: React.FC<IntroSplashProps> = ({ onComplete, forcePlay 
       gsap.set(containerRef.current, { opacity: 1, x: 0, y: 0 });
       gsap.set(ambientGlowRef.current, { opacity: 0, scale: 0.6 });
       
-      // Laser scan beam & title clip-path
-      gsap.set(titleMaskRef.current, { clipPath: 'inset(0% 100% 0% 0%)', opacity: 1 });
-      gsap.set(scanBeamRef.current, { left: '0%', opacity: 0 });
+      // Light sweep & glow overlays
       gsap.set(shimmerRef.current, { opacity: 0, xPercent: -150 });
       gsap.set(xrayGlowRef.current, { opacity: 0, scale: 0.5 });
 
-      // Letter-by-letter initial state
+      // Hairline Typography Initial State (Font Weight 100, Opacity 1, No scale/position jump)
       codeLetterRefs.current.forEach((el) => {
-        if (el) gsap.set(el, { opacity: 0, scale: 0.85, filter: 'blur(6px)' });
+        if (el) gsap.set(el, { opacity: 1, fontWeight: 100, scale: 1, y: 0, filter: 'blur(0px)' });
       });
       xrayLetterRefs.current.forEach((el) => {
-        if (el) gsap.set(el, { opacity: 0, scale: 0.85, filter: 'blur(6px)' });
+        if (el) gsap.set(el, { opacity: 1, fontWeight: 100, scale: 1, y: 0, filter: 'blur(0px)' });
+      });
+
+      // Gemini gradient overlay on Xray (initially opacity 0 over chrome base)
+      geminiOverlayRefs.current.forEach((el) => {
+        if (el) gsap.set(el, { opacity: 0, fontWeight: 100, scale: 1 });
       });
 
       // Tagline
@@ -93,69 +99,37 @@ export const IntroSplash: React.FC<IntroSplashProps> = ({ onComplete, forcePlay 
         0.20
       );
 
-      // STAGE 2 (0.45s - 0.95s): Laser Scanning Beam sweeps across "CodeXray"
-      masterTl.to(
-        scanBeamRef.current,
-        {
-          opacity: 1,
-          duration: 0.08,
-          ease: 'power1.out',
-        },
-        0.45
-      );
-
-      const scanObj = { progress: 0 };
-      masterTl.to(
-        scanObj,
-        {
-          progress: 100,
-          duration: 0.50,
-          ease: 'power2.inOut',
-          onUpdate: () => {
-            const val = scanObj.progress;
-            if (titleMaskRef.current) {
-              gsap.set(titleMaskRef.current, {
-                clipPath: `inset(0% ${100 - val}% 0% 0%)`,
-              });
-            }
-            if (scanBeamRef.current) {
-              gsap.set(scanBeamRef.current, {
-                left: `${val}%`,
-              });
-            }
-          },
-        },
-        0.45
-      );
-
-      // STAGE 3 (0.48s - 0.88s): Letter-by-letter staggered activation
-      const allLetterEls = [...codeLetterRefs.current, ...xrayLetterRefs.current];
-      allLetterEls.forEach((letter, idx) => {
+      // STAGE 2 & 3 (0.20s - 1.05s): Variable Stroke Weight Growth Wave (Left-to-Right)
+      // Hairline (100) -> Thin (200) -> Medium (500) -> Ultra-Bold (900)
+      const allLetters = [...codeLetterRefs.current, ...xrayLetterRefs.current];
+      allLetters.forEach((letter, idx) => {
         if (!letter) return;
         masterTl.to(
           letter,
           {
-            opacity: 1,
-            scale: 1,
-            filter: 'blur(0px)',
-            duration: 0.28,
-            ease: 'back.out(1.4)',
+            fontWeight: 900,
+            duration: 0.45,
+            ease: 'power2.inOut',
           },
-          0.48 + idx * 0.042
+          0.20 + idx * 0.06
         );
       });
 
-      masterTl.to(
-        scanBeamRef.current,
-        {
-          opacity: 0,
-          duration: 0.12,
-          ease: 'power2.out',
-        },
-        0.97
-      );
+      // Synchronize weight growth for Gemini overlay characters
+      geminiOverlayRefs.current.forEach((overlay, idx) => {
+        if (!overlay) return;
+        masterTl.to(
+          overlay,
+          {
+            fontWeight: 900,
+            duration: 0.45,
+            ease: 'power2.inOut',
+          },
+          0.20 + (codeLetters.length + idx) * 0.06
+        );
+      });
 
-      // STAGE 4 (0.95s - 1.35s): Gemini Gradient Energy Activation
+      // STAGE 5 (1.15s - 1.50s): Transition to Gemini Gradient & Soft Volumetric Pulse
       masterTl.to(
         xrayGlowRef.current,
         {
@@ -164,8 +138,24 @@ export const IntroSplash: React.FC<IntroSplashProps> = ({ onComplete, forcePlay 
           duration: 0.38,
           ease: 'sine.inOut',
         },
-        0.95
-      ).to(
+        1.15
+      );
+
+      // Gemini gradient flows smoothly through the stabilized "Xray" letters
+      geminiOverlayRefs.current.forEach((overlay, idx) => {
+        if (!overlay) return;
+        masterTl.to(
+          overlay,
+          {
+            opacity: 1,
+            duration: 0.35,
+            ease: 'power2.inOut',
+          },
+          1.15 + idx * 0.04
+        );
+      });
+
+      masterTl.to(
         xrayGlowRef.current,
         {
           opacity: 0.40,
@@ -173,14 +163,14 @@ export const IntroSplash: React.FC<IntroSplashProps> = ({ onComplete, forcePlay 
           duration: 0.45,
           ease: 'sine.inOut',
         },
-        1.33
+        1.48
       );
 
-      // STAGE 5 (1.30s - 1.65s): Premium Light Sweep / Shimmer Across Logo
+      // Premium Light Reflection Sweep across the polished logo
       masterTl.to(
         shimmerRef.current,
         { opacity: 0.85, xPercent: -150, duration: 0.01 },
-        1.30
+        1.35
       ).to(
         shimmerRef.current,
         {
@@ -189,35 +179,14 @@ export const IntroSplash: React.FC<IntroSplashProps> = ({ onComplete, forcePlay 
           duration: 0.42,
           ease: 'power2.inOut',
         },
-        1.31
+        1.36
       ).to(
         shimmerRef.current,
         { opacity: 0, duration: 0.1 },
-        1.70
+        1.78
       );
 
-      // STAGE 6 (1.65s - 1.95s): Soft Glow Pulse
-      masterTl.to(
-        xrayGlowRef.current,
-        {
-          opacity: 0.70,
-          scale: 1.18,
-          duration: 0.22,
-          ease: 'sine.out',
-        },
-        1.65
-      ).to(
-        xrayGlowRef.current,
-        {
-          opacity: 0.38,
-          scale: 1.0,
-          duration: 0.3,
-          ease: 'sine.in',
-        },
-        1.87
-      );
-
-      // STAGE 7 (1.95s - 2.35s): Tagline Reveal
+      // STAGE 6 (1.80s - 2.10s): Subtitle Tagline Reveal
       masterTl.to(
         taglineRef.current,
         {
@@ -227,7 +196,7 @@ export const IntroSplash: React.FC<IntroSplashProps> = ({ onComplete, forcePlay 
           duration: 0.42,
           ease: 'power3.out',
         },
-        1.95
+        1.80
       );
 
       // 2.20s: 5 Symbols appear with staggered entry
@@ -342,6 +311,8 @@ export const IntroSplash: React.FC<IntroSplashProps> = ({ onComplete, forcePlay 
         el: HTMLDivElement;
         x: number;
         y: number;
+        prevX: number;
+        prevY: number;
         vx: number;
         vy: number;
         rotation: number;
@@ -356,12 +327,104 @@ export const IntroSplash: React.FC<IntroSplashProps> = ({ onComplete, forcePlay 
       const activeSparks: SparkParticle[] = [];
       const symbolPhysicsList: SymbolPhysics[] = [];
       let physicsActive = false;
+      let eraseExpansion = 0;
+
+      // Canvas setup for particle reveal black overlay curtain
+      if (maskCanvasRef.current) {
+        const canvas = maskCanvasRef.current;
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.fillStyle = '#000000';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+      }
 
       const physicsTick = () => {
         if (!physicsActive) return;
 
+        // Erase mask canvas at flying particle locations
+        const canvas = maskCanvasRef.current;
+        const ctx = canvas ? canvas.getContext('2d') : null;
+
+        if (canvas && ctx) {
+          const cx = canvas.width / 2;
+          const cy = canvas.height / 2;
+
+          ctx.save();
+          ctx.globalCompositeOperation = 'destination-out';
+
+          // A. Erase paths along flying symbols
+          symbolPhysicsList.forEach((sp) => {
+            const prevSx = cx + sp.prevX;
+            const prevSy = cy + sp.prevY;
+            const cSx = cx + sp.x;
+            const cSy = cy + sp.y;
+
+            // Soft feathered trail radius expanding organically from ~120px to ~220px
+            const rad = 120 + Math.min(sp.travelDist * 0.35, 100);
+
+            const grad = ctx.createRadialGradient(cSx, cSy, rad * 0.15, cSx, cSy, rad);
+            grad.addColorStop(0, 'rgba(0,0,0,1)');
+            grad.addColorStop(0.5, 'rgba(0,0,0,0.85)');
+            grad.addColorStop(1, 'rgba(0,0,0,0)');
+
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.arc(cSx, cSy, rad, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Connecting stroke between frames
+            ctx.lineWidth = rad * 1.6;
+            ctx.lineCap = 'round';
+            ctx.strokeStyle = grad;
+            ctx.beginPath();
+            ctx.moveTo(prevSx, prevSy);
+            ctx.lineTo(cSx, cSy);
+            ctx.stroke();
+          });
+
+          // B. Erase spots along flying spark particles
+          activeSparks.forEach((spark) => {
+            const sx = cx + spark.x;
+            const sy = cy + spark.y;
+            const rad = 45;
+
+            const grad = ctx.createRadialGradient(sx, sy, 0, sx, sy, rad);
+            grad.addColorStop(0, 'rgba(0,0,0,0.95)');
+            grad.addColorStop(0.6, 'rgba(0,0,0,0.5)');
+            grad.addColorStop(1, 'rgba(0,0,0,0)');
+
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.arc(sx, sy, rad, 0, Math.PI * 2);
+            ctx.fill();
+          });
+
+          // C. Expanding organic reveal wash from center blast so 100% of curtain clears by ~4.85s
+          eraseExpansion += 0.038;
+          if (eraseExpansion > 0.15) {
+            const expandRad = (eraseExpansion - 0.15) * Math.max(canvas.width, canvas.height) * 1.3;
+            const expandGrad = ctx.createRadialGradient(cx, cy, expandRad * 0.25, cx, cy, expandRad);
+            expandGrad.addColorStop(0, 'rgba(0,0,0,1)');
+            expandGrad.addColorStop(0.7, 'rgba(0,0,0,0.85)');
+            expandGrad.addColorStop(1, 'rgba(0,0,0,0)');
+
+            ctx.fillStyle = expandGrad;
+            ctx.beginPath();
+            ctx.arc(cx, cy, expandRad, 0, Math.PI * 2);
+            ctx.fill();
+          }
+
+          ctx.restore();
+        }
+
         // 1. Update Symbol Physics
         symbolPhysicsList.forEach((sp) => {
+          sp.prevX = sp.x;
+          sp.prevY = sp.y;
+
           const gravity = 0.45; // Gradual downward gravity
           const drag = 0.992; // Slow drag deceleration
 
@@ -418,10 +481,19 @@ export const IntroSplash: React.FC<IntroSplashProps> = ({ onComplete, forcePlay 
         }
       };
 
-      // 4.22s: FRAME-BY-FRAME PHYSICS RELEASE TRIGGER
+      // 4.22s: FRAME-BY-FRAME PHYSICS RELEASE TRIGGER & PARTICLE REVEAL
       masterTl.add(() => {
         physicsActive = true;
         gsap.ticker.add(physicsTick);
+
+        // Fade out intro hero text column so flying particles tear through curtain over homepage
+        if (heroColumnRef.current) {
+          gsap.to(heroColumnRef.current, {
+            opacity: 0,
+            duration: 0.35,
+            ease: 'power2.out',
+          });
+        }
 
         const omegaPerFrame = (4 * Math.PI) / 60; // Orbital angular velocity
 
@@ -455,6 +527,8 @@ export const IntroSplash: React.FC<IntroSplashProps> = ({ onComplete, forcePlay 
             el: sym,
             x: pos.x,
             y: pos.y,
+            prevX: pos.x,
+            prevY: pos.y,
             vx,
             vy,
             rotation: initialRotation,
@@ -496,20 +570,11 @@ export const IntroSplash: React.FC<IntroSplashProps> = ({ onComplete, forcePlay 
         });
       }, 4.22);
 
-      // 4.52s - 4.90s: Seamless Reveal of Homepage as scene dissolves
-      masterTl.to(
-        containerRef.current,
-        {
-          opacity: 0,
-          duration: 0.38,
-          ease: 'power3.inOut',
-          onComplete: () => {
-            physicsActive = false;
-            gsap.ticker.remove(physicsTick);
-          },
-        },
-        4.52
-      );
+      // 4.88s: End physics tick and unmount overlay
+      masterTl.add(() => {
+        physicsActive = false;
+        gsap.ticker.remove(physicsTick);
+      }, 4.88);
     }, containerRef);
 
     return () => {
@@ -523,25 +588,30 @@ export const IntroSplash: React.FC<IntroSplashProps> = ({ onComplete, forcePlay 
   return (
     <div
       ref={containerRef}
-      className="fixed inset-0 z-[9999] bg-black text-white flex flex-col items-center justify-center overflow-hidden select-none pointer-events-auto"
-      style={{
-        backgroundColor: '#000000',
-        willChange: 'transform, opacity',
-      }}
+      className="fixed inset-0 z-[9999] text-white flex flex-col items-center justify-center overflow-hidden select-none pointer-events-none"
     >
-      {/* 1. Deep Ambient Radial Volumetric Blue/Purple Glow */}
-      <div
-        ref={ambientGlowRef}
-        className="absolute w-[950px] h-[950px] rounded-full pointer-events-none"
-        style={{
-          background:
-            'radial-gradient(circle, rgba(66, 133, 244, 0.32) 0%, rgba(109, 94, 249, 0.18) 38%, rgba(217, 70, 239, 0.05) 60%, rgba(0,0,0,0) 75%)',
-          willChange: 'transform, opacity',
-        }}
+      {/* Full-Screen Black Curtain Canvas Mask */}
+      <canvas
+        ref={maskCanvasRef}
+        className="absolute inset-0 w-full h-full pointer-events-none z-0"
       />
 
-      {/* Main Content Center Column */}
-      <div className="relative z-10 flex flex-col items-center justify-center text-center px-4 w-full max-w-5xl mx-auto">
+      {/* Hero Text & Glow Column (Fades out at blast release so particles tear through curtain) */}
+      <div
+        ref={heroColumnRef}
+        className="relative z-10 flex flex-col items-center justify-center text-center px-4 w-full max-w-5xl mx-auto"
+      >
+        {/* 1. Deep Ambient Radial Volumetric Blue/Purple Glow */}
+        <div
+          ref={ambientGlowRef}
+          className="absolute w-[950px] h-[950px] rounded-full pointer-events-none"
+          style={{
+            background:
+              'radial-gradient(circle, rgba(66, 133, 244, 0.32) 0%, rgba(109, 94, 249, 0.18) 38%, rgba(217, 70, 239, 0.05) 60%, rgba(0,0,0,0) 75%)',
+            willChange: 'transform, opacity',
+          }}
+        />
+
         {/* Soft Volumetric Background Pulse centered behind logo */}
         <div
           ref={xrayGlowRef}
@@ -552,49 +622,58 @@ export const IntroSplash: React.FC<IntroSplashProps> = ({ onComplete, forcePlay 
           }}
         />
 
-        {/* 2. Main Hero Logo: "CodeXray" (-13% size reduction for perfect composition) */}
+        {/* 2. Main Hero Logo: "CodeXray" (Liquid Metal Formation) */}
         <div className="relative z-10 mb-4 py-2 overflow-hidden">
-          {/* Laser Scanning Beam Line */}
-          <div
-            ref={scanBeamRef}
-            className="absolute top-0 bottom-0 w-[4px] bg-cyan-200 shadow-[0_0_25px_8px_rgba(56,189,248,0.95)] z-30 pointer-events-none"
-          />
-
           {/* Light Sweep / Shimmer overlay */}
           <div
             ref={shimmerRef}
-            className="absolute top-0 bottom-0 -left-1/2 w-1/2 bg-gradient-to-r from-transparent via-white/50 to-transparent -skew-x-12 z-25 pointer-events-none"
+            className="absolute top-0 bottom-0 -left-1/2 w-1/2 bg-gradient-to-r from-transparent via-white/60 to-transparent -skew-x-12 z-25 pointer-events-none"
           />
 
-          <div ref={titleMaskRef} className="relative z-20">
-            <h1 className="text-[3.6rem] sm:text-[5.8rem] md:text-[6.6rem] leading-none font-black tracking-tight font-sans flex items-center justify-center">
-              {/* Metallic Light-Reflective White "Code" */}
-              <span className="inline-flex font-extrabold drop-shadow-[0_4px_30px_rgba(255,255,255,0.5)]">
+          <div className="relative z-20">
+            <h1 className="text-[3.6rem] sm:text-[5.8rem] md:text-[6.6rem] leading-none tracking-tight font-sans flex items-center justify-center">
+              {/* Variable Weight "Code" */}
+              <span className="inline-flex drop-shadow-[0_4px_35px_rgba(255,255,255,0.55)]">
                 {codeLetters.map((char, index) => (
                   <span
                     key={`code-let-${index}`}
                     ref={(el) => { codeLetterRefs.current[index] = el; }}
-                    className="inline-block bg-clip-text text-transparent bg-gradient-to-b from-white via-slate-100 to-slate-300"
+                    className="inline-block bg-clip-text text-transparent bg-gradient-to-b from-[#FFFFFF] via-[#E2E8F0] via-[#CBD5E1] to-[#64748B]"
                   >
                     {char}
                   </span>
                 ))}
               </span>
-              {/* Animated Glowing Gemini Gradient "Xray" */}
-              <span className="inline-flex px-2 drop-shadow-[0_0_40px_rgba(109,94,249,0.7)]">
+
+              {/* Variable Weight -> Gemini Gradient "Xray" */}
+              <span className="relative inline-flex px-2 drop-shadow-[0_0_40px_rgba(109,94,249,0.7)]">
+                {/* Base Polished Chrome Layer */}
                 {xrayLetters.map((char, index) => (
                   <span
-                    key={`xray-let-${index}`}
+                    key={`xray-base-${index}`}
                     ref={(el) => { xrayLetterRefs.current[index] = el; }}
-                    className="inline-block bg-clip-text text-transparent bg-gradient-to-r from-[#4285F4] via-[#5B8CFF] via-[#6D5EF9] via-[#A855F7] to-[#D946EF]"
-                    style={{
-                      backgroundSize: '200% 200%',
-                      animation: 'geminiGradientShift 3.2s ease infinite',
-                    }}
+                    className="inline-block bg-clip-text text-transparent bg-gradient-to-b from-[#FFFFFF] via-[#E2E8F0] via-[#CBD5E1] to-[#64748B]"
                   >
                     {char}
                   </span>
                 ))}
+
+                {/* Overlaid Gemini Gradient Layer (flows organically over chrome once stabilized) */}
+                <span className="absolute inset-0 flex items-center justify-center px-2 pointer-events-none">
+                  {xrayLetters.map((char, index) => (
+                    <span
+                      key={`xray-gemini-${index}`}
+                      ref={(el) => { geminiOverlayRefs.current[index] = el; }}
+                      className="inline-block bg-clip-text text-transparent bg-gradient-to-r from-[#4285F4] via-[#5B8CFF] via-[#6D5EF9] via-[#A855F7] to-[#D946EF]"
+                      style={{
+                        backgroundSize: '200% 200%',
+                        animation: 'geminiGradientShift 3.2s ease infinite',
+                      }}
+                    >
+                      {char}
+                    </span>
+                  ))}
+                </span>
               </span>
             </h1>
           </div>
@@ -606,65 +685,65 @@ export const IntroSplash: React.FC<IntroSplashProps> = ({ onComplete, forcePlay 
             Understand Code. Don&apos;t Just Copy It.
           </p>
         </div>
+      </div>
 
-        {/* 4. 3D Orbiting AI Symbols around EMPTY CENTER Space */}
-        <div className="relative w-[440px] h-[440px] flex items-center justify-center">
-          {/* 5 Original Futuristic AI Symbols Group (NO center object - completely clean empty orbit center) */}
-          <div ref={symbolsGroupRef} className="relative w-full h-full flex items-center justify-center">
-            {/* Symbol 1: Code Matrix Node */}
-            <div
-              ref={(el) => { symbolRefs.current[0] = el; }}
-              className="absolute w-16 h-16 sm:w-18 sm:h-18 rounded-2xl bg-slate-950/95 border-2 border-blue-400/80 backdrop-blur-xl flex items-center justify-center shadow-[0_0_30px_rgba(66,133,244,0.75)]"
-            >
-              <svg className="w-8 h-8 sm:w-9 sm:h-9 text-blue-400 drop-shadow-[0_0_10px_rgba(66,133,244,0.9)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
-                <path d="M16 18l6-6-6-6M8 6l-6 6 6 6" strokeLinecap="round" strokeLinejoin="round" />
-                <circle cx="12" cy="12" r="2.2" fill="#5B8CFF" />
-              </svg>
-            </div>
+      {/* 4. 3D Orbiting AI Symbols (Stays 100% visible during blast reveal over homepage) */}
+      <div className="relative z-20 w-[440px] h-[440px] flex items-center justify-center pointer-events-none -mt-16">
+        {/* 5 Original Futuristic AI Symbols Group */}
+        <div ref={symbolsGroupRef} className="relative w-full h-full flex items-center justify-center">
+          {/* Symbol 1: Code Matrix Node */}
+          <div
+            ref={(el) => { symbolRefs.current[0] = el; }}
+            className="absolute w-16 h-16 sm:w-18 sm:h-18 rounded-2xl bg-slate-950/95 border-2 border-blue-400/80 backdrop-blur-xl flex items-center justify-center shadow-[0_0_30px_rgba(66,133,244,0.75)]"
+          >
+            <svg className="w-8 h-8 sm:w-9 sm:h-9 text-blue-400 drop-shadow-[0_0_10px_rgba(66,133,244,0.9)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+              <path d="M16 18l6-6-6-6M8 6l-6 6 6 6" strokeLinecap="round" strokeLinejoin="round" />
+              <circle cx="12" cy="12" r="2.2" fill="#5B8CFF" />
+            </svg>
+          </div>
 
-            {/* Symbol 2: Gemini AI Spark */}
-            <div
-              ref={(el) => { symbolRefs.current[1] = el; }}
-              className="absolute w-16 h-16 sm:w-18 sm:h-18 rounded-2xl bg-slate-950/95 border-2 border-indigo-400/80 backdrop-blur-xl flex items-center justify-center shadow-[0_0_30px_rgba(109,94,249,0.75)]"
-            >
-              <svg className="w-8 h-8 sm:w-9 sm:h-9 text-indigo-400 drop-shadow-[0_0_10px_rgba(109,94,249,0.9)]" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 0C12 6.627 6.627 12 0 12C6.627 12 12 17.373 12 24C12 17.373 17.373 12 24 12C17.373 12 12 6.627 12 0Z" />
-              </svg>
-            </div>
+          {/* Symbol 2: Gemini AI Spark */}
+          <div
+            ref={(el) => { symbolRefs.current[1] = el; }}
+            className="absolute w-16 h-16 sm:w-18 sm:h-18 rounded-2xl bg-slate-950/95 border-2 border-indigo-400/80 backdrop-blur-xl flex items-center justify-center shadow-[0_0_30px_rgba(109,94,249,0.75)]"
+          >
+            <svg className="w-8 h-8 sm:w-9 sm:h-9 text-indigo-400 drop-shadow-[0_0_10px_rgba(109,94,249,0.9)]" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 0C12 6.627 6.627 12 0 12C6.627 12 12 17.373 12 24C12 17.373 17.373 12 24 12C17.373 12 12 6.627 12 0Z" />
+            </svg>
+          </div>
 
-            {/* Symbol 3: X-Ray Scan Data Hexagon */}
-            <div
-              ref={(el) => { symbolRefs.current[2] = el; }}
-              className="absolute w-16 h-16 sm:w-18 sm:h-18 rounded-2xl bg-slate-950/95 border-2 border-cyan-400/80 backdrop-blur-xl flex items-center justify-center shadow-[0_0_30px_rgba(6,182,212,0.75)]"
-            >
-              <svg className="w-8 h-8 sm:w-9 sm:h-9 text-cyan-400 drop-shadow-[0_0_10px_rgba(6,182,212,0.9)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
-                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
-                <line x1="7" y1="12" x2="17" y2="12" stroke="#38BDF8" strokeWidth="1.8" strokeDasharray="2 2" />
-              </svg>
-            </div>
+          {/* Symbol 3: X-Ray Scan Data Hexagon */}
+          <div
+            ref={(el) => { symbolRefs.current[2] = el; }}
+            className="absolute w-16 h-16 sm:w-18 sm:h-18 rounded-2xl bg-slate-950/95 border-2 border-cyan-400/80 backdrop-blur-xl flex items-center justify-center shadow-[0_0_30px_rgba(6,182,212,0.75)]"
+          >
+            <svg className="w-8 h-8 sm:w-9 sm:h-9 text-cyan-400 drop-shadow-[0_0_10px_rgba(6,182,212,0.9)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+              <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+              <line x1="7" y1="12" x2="17" y2="12" stroke="#38BDF8" strokeWidth="1.8" strokeDasharray="2 2" />
+            </svg>
+          </div>
 
-            {/* Symbol 4: Intelligence Delta Circuit */}
-            <div
-              ref={(el) => { symbolRefs.current[3] = el; }}
-              className="absolute w-16 h-16 sm:w-18 sm:h-18 rounded-2xl bg-slate-950/95 border-2 border-purple-400/80 backdrop-blur-xl flex items-center justify-center shadow-[0_0_30px_rgba(168,85,247,0.75)]"
-            >
-              <svg className="w-8 h-8 sm:w-9 sm:h-9 text-purple-400 drop-shadow-[0_0_10px_rgba(168,85,247,0.9)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
-                <path d="M12 3l10 18H2L12 3z" strokeLinecap="round" strokeLinejoin="round" />
-                <circle cx="12" cy="14" r="2.2" fill="#C084FC" />
-              </svg>
-            </div>
+          {/* Symbol 4: Intelligence Delta Circuit */}
+          <div
+            ref={(el) => { symbolRefs.current[3] = el; }}
+            className="absolute w-16 h-16 sm:w-18 sm:h-18 rounded-2xl bg-slate-950/95 border-2 border-purple-400/80 backdrop-blur-xl flex items-center justify-center shadow-[0_0_30px_rgba(168,85,247,0.75)]"
+          >
+            <svg className="w-8 h-8 sm:w-9 sm:h-9 text-purple-400 drop-shadow-[0_0_10px_rgba(168,85,247,0.9)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+              <path d="M12 3l10 18H2L12 3z" strokeLinecap="round" strokeLinejoin="round" />
+              <circle cx="12" cy="14" r="2.2" fill="#C084FC" />
+            </svg>
+          </div>
 
-            {/* Symbol 5: Quantum Data Core */}
-            <div
-              ref={(el) => { symbolRefs.current[4] = el; }}
-              className="absolute w-16 h-16 sm:w-18 sm:h-18 rounded-2xl bg-slate-950/95 border-2 border-pink-400/80 backdrop-blur-xl flex items-center justify-center shadow-[0_0_30px_rgba(217,70,239,0.75)]"
-            >
-              <svg className="w-8 h-8 sm:w-9 sm:h-9 text-pink-400 drop-shadow-[0_0_10px_rgba(217,70,239,0.9)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
-                <circle cx="12" cy="12" r="9" strokeOpacity="0.5" />
-                <circle cx="12" cy="12" r="5" stroke="#F472B6" />
-                <circle cx="12" cy="12" r="2.2" fill="#F472B6" />
-              </svg>
-            </div>
+          {/* Symbol 5: Quantum Data Core */}
+          <div
+            ref={(el) => { symbolRefs.current[4] = el; }}
+            className="absolute w-16 h-16 sm:w-18 sm:h-18 rounded-2xl bg-slate-950/95 border-2 border-pink-400/80 backdrop-blur-xl flex items-center justify-center shadow-[0_0_30px_rgba(217,70,239,0.75)]"
+          >
+            <svg className="w-8 h-8 sm:w-9 sm:h-9 text-pink-400 drop-shadow-[0_0_10px_rgba(217,70,239,0.9)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+              <circle cx="12" cy="12" r="9" strokeOpacity="0.5" />
+              <circle cx="12" cy="12" r="5" stroke="#F472B6" />
+              <circle cx="12" cy="12" r="2.2" fill="#F472B6" />
+            </svg>
           </div>
         </div>
       </div>
