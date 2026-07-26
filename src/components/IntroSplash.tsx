@@ -328,79 +328,185 @@ export const IntroSplash: React.FC<IntroSplashProps> = ({ onComplete, forcePlay 
         );
       });
 
-      // 4.22s - 4.95s: PHYSICAL EXPLOSIVE BURST & GRAVITY FALL TRANSITION
-      symbolRefs.current.forEach((sym, index) => {
-        if (!sym) return;
-        const pos = finalPositions[index];
-        const releaseAngle = pos.theta;
+      // Sparks and Symbol Physics storage
+      interface SparkParticle {
+        el: HTMLDivElement;
+        x: number;
+        y: number;
+        vx: number;
+        vy: number;
+        life: number; // 0 to 1
+      }
 
-        // Independent random trajectory angle and burst speed for each symbol (Math.random)
-        const angleSpread = (Math.random() - 0.5) * 0.85;
-        const trajectoryAngle = releaseAngle + angleSpread;
-        const impulseSpeed = 220 + Math.random() * 140;
+      interface SymbolPhysics {
+        el: HTMLDivElement;
+        x: number;
+        y: number;
+        vx: number;
+        vy: number;
+        rotation: number;
+        angularVel: number;
+        scale: number;
+        opacity: number;
+        startX: number;
+        startY: number;
+        travelDist: number;
+      }
 
-        // Instant velocity impulse coordinates (X, Y)
-        const burstX = pos.x + Math.cos(trajectoryAngle) * impulseSpeed;
-        const burstY = pos.y + Math.sin(trajectoryAngle) * impulseSpeed - (50 + Math.random() * 60);
+      const activeSparks: SparkParticle[] = [];
+      const symbolPhysicsList: SymbolPhysics[] = [];
+      let physicsActive = false;
 
-        // Gravity decay effect: downward arc acceleration and momentum continuation
-        const gravityFallX = burstX + Math.cos(trajectoryAngle) * (90 + Math.random() * 70);
-        const gravityFallY = burstY + 520 + Math.random() * 160;
+      const physicsTick = () => {
+        if (!physicsActive) return;
 
-        // Independent random angular spin
-        const randomSpin = (Math.random() > 0.5 ? 1 : -1) * (360 + Math.random() * 400);
+        // 1. Update Symbol Physics
+        symbolPhysicsList.forEach((sp) => {
+          const gravity = 0.45; // Gradual downward gravity
+          const drag = 0.992; // Slow drag deceleration
 
-        // 1. Initial Explosive Outward Impulse (POP!) - Immediate velocity, scale stays 1.0, 100% visible
-        masterTl.to(
-          sym,
-          {
-            x: burstX,
-            y: burstY,
-            scale: 1.0,
-            opacity: 1, // 100% visible
-            rotation: `+=${randomSpin * 0.35}`,
+          sp.vy += gravity;
+          sp.vx *= drag;
+          sp.vy *= drag;
+
+          sp.x += sp.vx;
+          sp.y += sp.vy;
+          sp.rotation += sp.angularVel;
+
+          const dx = sp.x - sp.startX;
+          const dy = sp.y - sp.startY;
+          sp.travelDist = Math.sqrt(dx * dx + dy * dy);
+
+          // Do not begin fading until symbol has traveled at least 300 pixels
+          if (sp.travelDist >= 300) {
+            sp.opacity = Math.max(0, sp.opacity - 0.032);
+          }
+
+          gsap.set(sp.el, {
+            x: sp.x,
+            y: sp.y,
+            rotation: sp.rotation,
+            scale: sp.scale, // Scale maintained within ±0% (constant size)
+            opacity: sp.opacity,
             filter: 'blur(0px)',
-            duration: 0.16,
-            ease: 'expo.out',
-          },
-          4.22
-        );
+          });
+        });
 
-        // 2. Physics Gravity Arc: Natural momentum loss & gravity downward acceleration
-        masterTl.to(
-          sym,
-          {
-            x: gravityFallX,
-            y: burstY + 140, // Travel significant distance while remaining 100% visible
-            scale: 1.0,
-            opacity: 1, // Maintained visible through initial fall distance
-            rotation: `+=${randomSpin * 0.35}`,
-            duration: 0.22,
-            ease: 'power1.in',
-          },
-          4.38
-        ).to(
-          sym,
-          {
-            x: gravityFallX + Math.cos(trajectoryAngle) * 50,
-            y: gravityFallY, // Downward gravity decay curve
-            scale: 1.0,
-            opacity: 0, // Trigger opacity fade-out only after traveling a significant distance
-            rotation: `+=${randomSpin * 0.30}`,
-            duration: 0.32,
-            ease: 'power2.in', // Physics-based gravity decay with power2.in
-          },
-          4.60
-        );
-      });
+        // 2. Update Spark Particles Physics
+        for (let i = activeSparks.length - 1; i >= 0; i--) {
+          const spark = activeSparks[i];
+          spark.vy += 0.35; // Spark gravity
+          spark.vx *= 0.96; // Spark drag
+          spark.vy *= 0.96;
+          spark.x += spark.vx;
+          spark.y += spark.vy;
+          spark.life -= 0.045; // Lifetime decay
 
-      // 4.55s - 4.90s: Seamless Reveal of Homepage as symbols dissolve
+          if (spark.life <= 0 || !spark.el.parentNode) {
+            if (spark.el.parentNode) {
+              spark.el.parentNode.removeChild(spark.el);
+            }
+            activeSparks.splice(i, 1);
+          } else {
+            gsap.set(spark.el, {
+              x: spark.x,
+              y: spark.y,
+              opacity: Math.max(0, spark.life),
+              scale: spark.life * 0.9,
+            });
+          }
+        }
+      };
+
+      // 4.22s: FRAME-BY-FRAME PHYSICS RELEASE TRIGGER
+      masterTl.add(() => {
+        physicsActive = true;
+        gsap.ticker.add(physicsTick);
+
+        const omegaPerFrame = (4 * Math.PI) / 60; // Orbital angular velocity
+
+        symbolRefs.current.forEach((sym, index) => {
+          if (!sym) return;
+          gsap.killTweensOf(sym); // Stop previous jitter/orbit tweens
+
+          const pos = finalPositions[index] || { x: 0, y: 0, theta: 0 };
+          const theta = pos.theta;
+
+          // Compute exact tangential velocity from orbit ellipse
+          const vxTangential = -Math.sin(theta) * rx * omegaPerFrame;
+          const vyTangential = Math.cos(theta) * ry * omegaPerFrame;
+
+          // Preserve tangential velocity with small ±10° random deviation
+          const tangAngle = Math.atan2(vyTangential, vxTangential);
+          const deviation = (Math.random() - 0.5) * (20 * Math.PI / 180); // ±10 deg
+          const finalAngle = tangAngle + deviation;
+          const speed = Math.sqrt(vxTangential * vxTangential + vyTangential * vyTangential);
+
+          const vx = Math.cos(finalAngle) * speed;
+          const vy = Math.sin(finalAngle) * speed;
+
+          const z = Math.sin(theta);
+          const initialScale = 1.0; // Maintain constant scale
+          const initialOpacity = 0.85 + (z + 1) * 0.075;
+          const initialRotation = (orbitObj.angle * 100) / Math.PI + index * 36;
+          const angularVel = (index % 2 === 0 ? 1 : -1) * (3.5 + Math.random() * 2.5);
+
+          symbolPhysicsList.push({
+            el: sym,
+            x: pos.x,
+            y: pos.y,
+            vx,
+            vy,
+            rotation: initialRotation,
+            angularVel,
+            scale: initialScale,
+            opacity: Math.min(1.0, initialOpacity),
+            startX: pos.x,
+            startY: pos.y,
+            travelDist: 0,
+          });
+
+          // Generate 6-10 tiny sparks at release point
+          const sparkCount = 8 + Math.floor(Math.random() * 3);
+          const parentContainer = symbolsGroupRef.current;
+          if (parentContainer) {
+            for (let k = 0; k < sparkCount; k++) {
+              const sparkEl = document.createElement('div');
+              sparkEl.className =
+                'absolute w-2 h-2 rounded-full bg-cyan-200 shadow-[0_0_12px_rgba(56,189,248,0.95)] pointer-events-none z-30';
+              parentContainer.appendChild(sparkEl);
+
+              const sparkAngle = finalAngle + (Math.random() - 0.5) * (80 * Math.PI / 180);
+              const sparkSpeed = speed * (1.1 + Math.random() * 1.2);
+              const sparkVx = Math.cos(sparkAngle) * sparkSpeed;
+              const sparkVy = Math.sin(sparkAngle) * sparkSpeed - 2;
+
+              gsap.set(sparkEl, { x: pos.x, y: pos.y, opacity: 1, scale: 1 });
+
+              activeSparks.push({
+                el: sparkEl,
+                x: pos.x,
+                y: pos.y,
+                vx: sparkVx,
+                vy: sparkVy,
+                life: 1.0,
+              });
+            }
+          }
+        });
+      }, 4.22);
+
+      // 4.52s - 4.90s: Seamless Reveal of Homepage as scene dissolves
       masterTl.to(
         containerRef.current,
         {
           opacity: 0,
           duration: 0.38,
           ease: 'power3.inOut',
+          onComplete: () => {
+            physicsActive = false;
+            gsap.ticker.remove(physicsTick);
+          },
         },
         4.52
       );
