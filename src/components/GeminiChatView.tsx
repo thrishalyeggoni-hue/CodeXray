@@ -419,7 +419,56 @@ def has_cycle(head):
                   </div>
 
                   <div className="chatgpt-markdown text-sm sm:text-base leading-relaxed font-sans space-y-2">
-                    <Markdown>{sanitizeLaTeX(msg.text)}</Markdown>
+                    <Markdown
+                      components={{
+                        p({ children }: any) {
+                          return <div className="mb-2 leading-relaxed">{children}</div>;
+                        },
+                        pre({ children }: any) {
+                          return <div className="my-2">{children}</div>;
+                        },
+                        code({ node, inline, className, children, ...props }: any) {
+                          const match = /language-(\w+)/.exec(className || '');
+                          const codeStr = String(children).replace(/\n$/, '');
+                          const lines = codeStr.split('\n');
+                          const isMultiLine = lines.length > 1;
+
+                          if (inline || (!isMultiLine && !match)) {
+                            return (
+                              <code
+                                className={`px-1.5 py-0.5 rounded font-mono text-[12px] ${
+                                  isLight
+                                    ? 'bg-slate-200/90 text-indigo-800 font-semibold border border-slate-300'
+                                    : 'bg-slate-800/90 text-cyan-300 border border-slate-700'
+                                } ${className || ''}`}
+                                {...props}
+                              >
+                                {children}
+                              </code>
+                            );
+                          }
+
+                          return (
+                            <div className={`my-2 rounded-lg border font-mono overflow-hidden shadow-xs ${
+                              isLight
+                                ? 'bg-slate-900 border-slate-700 text-slate-100'
+                                : 'bg-[#090d16] border-slate-800 text-slate-100'
+                            }`}>
+                              <div className="px-3 py-1 bg-slate-800/80 border-b border-slate-700/60 flex items-center justify-between text-[10px] font-mono text-slate-300">
+                                <span className="font-bold text-cyan-400 uppercase tracking-wider">
+                                  {match ? match[1].toUpperCase() : 'CODE'}
+                                </span>
+                              </div>
+                              <div className="p-2.5 text-xs font-mono text-cyan-200 overflow-x-auto leading-relaxed bg-[#090d16]">
+                                <code>{codeStr}</code>
+                              </div>
+                            </div>
+                          );
+                        },
+                      }}
+                    >
+                      {sanitizeLaTeX(msg.text)}
+                    </Markdown>
                   </div>
 
                   {msg.codeSnippet && (

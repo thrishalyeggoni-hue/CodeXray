@@ -463,12 +463,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ initialSampleId, theme = '
             onClick={() => setFullscreenModule(activeTab)}
             className={`flex items-center space-x-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold border backdrop-blur-md transition-all shadow-sm cursor-pointer ${
               isLight
-                ? 'bg-cyan-50 border-cyan-200 text-cyan-800 hover:bg-cyan-100'
-                : 'bg-cyan-500/10 border-cyan-500/20 text-cyan-300 hover:bg-cyan-500/20'
+                ? 'bg-cyan-600 border-cyan-600 text-white hover:bg-cyan-700'
+                : 'bg-cyan-500/20 border-cyan-500/30 text-cyan-200 hover:bg-cyan-500/30'
             }`}
             title="Open active module in Full Screen View (Zero Distractions)"
           >
-            <Maximize2 className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
+            <Maximize2 className="w-3.5 h-3.5 text-cyan-200 animate-pulse" />
             <span className="hidden sm:inline">Full Screen View</span>
           </motion.button>
 
@@ -538,18 +538,18 @@ export const Dashboard: React.FC<DashboardProps> = ({ initialSampleId, theme = '
         >
           {/* Editor Header with Split Presets and Font Size Controls */}
           <div className={`px-3 py-2 border-b flex flex-wrap items-center justify-between gap-2 text-xs font-mono shrink-0 ${
-            isLight ? 'bg-slate-50 border-slate-200 text-slate-700' : 'bg-[#0e0e10] border-white/5 text-slate-400'
+            isLight ? 'bg-slate-100 border-slate-200 text-slate-800' : 'bg-[#0e0e10] border-white/5 text-slate-400'
           }`}>
             <div className="flex items-center space-x-2">
               <Code2 className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
               <span className={`font-semibold ${isLight ? 'text-slate-900' : 'text-slate-200'}`}>Monaco Editor</span>
-              <span className="text-[10px] text-slate-400">({code.split('\n').length} lines)</span>
+              <span className={`text-[10px] ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>({code.split('\n').length} lines)</span>
             </div>
 
             <div className="flex items-center space-x-2">
               {/* Quick Split Presets */}
               <div className="hidden xl:flex items-center space-x-1 text-[10px]">
-                <span className="text-slate-500 font-sans">Resize:</span>
+                <span className={`${isLight ? 'text-slate-700 font-bold' : 'text-slate-300'} font-sans`}>Resize:</span>
                 {[
                   { label: '30/70', ratio: 30 },
                   { label: '40/60', ratio: 40 },
@@ -560,10 +560,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ initialSampleId, theme = '
                   <button
                     key={preset.label}
                     onClick={() => setSplitRatio(preset.ratio)}
-                    className={`px-1.5 py-0.5 rounded transition-all font-mono cursor-pointer ${
+                    className={`px-2 py-0.5 rounded transition-all font-mono cursor-pointer border ${
                       Math.round(splitRatio) === preset.ratio
-                        ? 'bg-indigo-600 text-white font-bold'
-                        : 'bg-slate-800/50 text-slate-400 hover:text-white'
+                        ? 'bg-indigo-600 text-white font-bold border-indigo-600 shadow-xs'
+                        : isLight
+                          ? 'bg-white border-slate-300 text-slate-800 hover:bg-slate-200 hover:text-slate-900 font-medium'
+                          : 'bg-slate-800/80 border-slate-700 text-slate-300 hover:text-white hover:bg-slate-700'
                     }`}
                     title={`Set split view ratio to ${preset.label}`}
                   >
@@ -573,19 +575,21 @@ export const Dashboard: React.FC<DashboardProps> = ({ initialSampleId, theme = '
               </div>
 
               {/* Font Size Adjuster */}
-              <div className="flex items-center space-x-1 bg-slate-800/40 px-1.5 py-0.5 rounded border border-white/5 text-[10px]">
-                <Type className="w-3 h-3 text-cyan-400" />
+              <div className={`flex items-center space-x-1 px-2 py-0.5 rounded border text-[10px] ${
+                isLight ? 'bg-white border-slate-300 text-slate-800 font-medium' : 'bg-slate-800/80 border-slate-700 text-slate-200'
+              }`}>
+                <Type className={`w-3 h-3 ${isLight ? 'text-indigo-600' : 'text-cyan-400'}`} />
                 <button
                   onClick={() => setEditorFontSize(Math.max(11, editorFontSize - 1))}
-                  className="px-1 text-slate-300 hover:text-white font-bold cursor-pointer"
+                  className={`px-1 font-bold cursor-pointer ${isLight ? 'text-slate-800 hover:text-black' : 'text-slate-200 hover:text-white'}`}
                   title="Decrease editor font size"
                 >
                   -
                 </button>
-                <span className="font-mono text-cyan-300">{editorFontSize}px</span>
+                <span className={`font-mono font-bold ${isLight ? 'text-indigo-700' : 'text-cyan-300'}`}>{editorFontSize}px</span>
                 <button
                   onClick={() => setEditorFontSize(Math.min(22, editorFontSize + 1))}
-                  className="px-1 text-slate-300 hover:text-white font-bold cursor-pointer"
+                  className={`px-1 font-bold cursor-pointer ${isLight ? 'text-slate-800 hover:text-black' : 'text-slate-200 hover:text-white'}`}
                   title="Increase editor font size"
                 >
                   +
@@ -595,10 +599,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ initialSampleId, theme = '
               {/* Full Screen Monaco Editor Button */}
               <button
                 onClick={() => setFullscreenModule('editor')}
-                className="flex items-center space-x-1 px-2 py-1 rounded bg-cyan-500/15 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/30 transition-all cursor-pointer text-[10px] font-mono font-semibold"
+                className={`flex items-center space-x-1 px-2.5 py-1 rounded border transition-all cursor-pointer text-[10px] font-mono font-bold shadow-xs ${
+                  isLight
+                    ? 'bg-cyan-600 text-white border-cyan-600 hover:bg-cyan-700'
+                    : 'bg-cyan-500/20 hover:bg-cyan-500/35 text-cyan-200 border-cyan-500/40'
+                }`}
                 title="Open Monaco Code Editor in Distraction-Free Full Screen View"
               >
-                <Maximize2 className="w-3 h-3 text-cyan-400" />
+                <Maximize2 className="w-3 h-3" />
                 <span className="hidden sm:inline">Full Screen</span>
               </button>
             </div>
@@ -1013,24 +1021,191 @@ export const Dashboard: React.FC<DashboardProps> = ({ initialSampleId, theme = '
         </div>
       </div>
 
-      {/* Professional Watermark Footer Bar */}
-      <div className={`py-1.5 px-4 rounded-lg border flex items-center justify-between text-[11px] font-mono shrink-0 select-none ${
+      {/* Clean Structured Footer Bar */}
+      <div className={`py-2 px-4 rounded-xl border flex items-center justify-center text-xs font-mono shrink-0 select-none shadow-xs ${
         isLight
-          ? 'bg-slate-200/70 border-slate-300 text-slate-600'
-          : 'bg-[#0e0e10] border-white/5 text-slate-500'
+          ? 'bg-white border-slate-300 text-slate-800 font-semibold'
+          : 'bg-[#0e0e10] border-white/10 text-slate-300 font-semibold'
       }`}>
-        <div className="flex items-center space-x-2">
-          <Code2 className="w-3.5 h-3.5 text-indigo-500" />
-          <span className="font-bold tracking-wider uppercase">CodeXray AI Studio</span>
-          <span>•</span>
-          <span className="font-medium">Enterprise Code Intelligence</span>
-        </div>
-        <div className="hidden sm:flex items-center space-x-3">
-          <span>Powered by Gemini 2.0 & Python Tutor Engine</span>
-          <span>•</span>
-          <span className="text-indigo-600 dark:text-indigo-400 font-semibold tracking-wide">CONFIDENTIAL & SECURE</span>
+        <div className="flex items-center justify-center space-x-1.5 text-xs font-semibold">
+          <span>Made with</span>
+          <GeminiHeartIcon size={16} className="inline-block transition-transform hover:scale-125 duration-200 cursor-pointer mx-0.5" />
+          <span>for students</span>
         </div>
       </div>
+
+      {/* DEDICATED FULL-SCREEN MODULE OVERLAY (ZERO DISTRACTIONS) */}
+      {fullscreenModule && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.99 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.99 }}
+          className="fixed inset-0 z-50 p-3 sm:p-6 bg-[#09090e] text-slate-100 flex flex-col backdrop-blur-3xl overflow-hidden"
+        >
+          {/* Top Bar */}
+          <div className="flex items-center justify-between pb-3 mb-3 border-b border-white/10 shrink-0">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 rounded-xl bg-gradient-to-r from-cyan-500/20 to-purple-500/20 border border-cyan-500/30">
+                <Maximize2 className="w-4 h-4 text-cyan-400 animate-pulse" />
+              </div>
+              <div>
+                <h2 className="text-sm font-bold text-white flex items-center gap-2">
+                  <span>
+                    {fullscreenModule === 'editor' && 'Monaco Code Editor — Full Screen'}
+                    {fullscreenModule === 'chatgpt' && 'AI ChatGPT Tutor Explainer — Full Screen'}
+                    {fullscreenModule === 'pythontutor' && 'Python Tutor Execution Visualizer — Full Screen'}
+                    {fullscreenModule === 'xray' && 'Code X-Ray Analysis & Line-by-Line — Full Screen'}
+                    {fullscreenModule === 'dryrun' && 'AI Memory & Variable Step Player — Full Screen'}
+                    {fullscreenModule === 'complexity' && 'Big-O Time & Space Complexity — Full Screen'}
+                    {fullscreenModule === 'quiz' && 'Interactive Code Quiz — Full Screen'}
+                    {fullscreenModule === 'interview' && 'Mock Technical Interviewer — Full Screen'}
+                    {fullscreenModule === 'notes' && 'Revision & Exam Study Notes — Full Screen'}
+                    {fullscreenModule === 'history' && 'Code Studio History — Full Screen'}
+                  </span>
+                  <span className="px-2 py-0.5 text-[10px] rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-mono">
+                    ESC to Exit
+                  </span>
+                </h2>
+                <p className="text-xs text-slate-400">
+                  Zero distraction full-screen view for focused learning and debugging
+                </p>
+              </div>
+            </div>
+
+            {/* Controls */}
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={() => setFullscreenModule(null)}
+                className="flex items-center space-x-1.5 px-3.5 py-1.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30 hover:bg-rose-500/30 transition-all text-xs font-semibold cursor-pointer shadow-lg"
+                title="Exit Full Screen View"
+              >
+                <Minimize2 className="w-3.5 h-3.5" />
+                <span>Exit Full Screen</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Main Fullscreen Body */}
+          <div className="flex-1 min-h-0 overflow-y-auto rounded-xl border border-white/10 bg-[#0e0e14] p-4 shadow-2xl">
+            {fullscreenModule === 'editor' && (
+              <div className="h-full flex flex-col">
+                <div className="pb-3 mb-3 border-b border-white/10 flex items-center justify-between text-xs font-mono text-slate-300">
+                  <span className="text-cyan-400 font-bold uppercase">{language} • {code.split('\n').length} lines</span>
+                  <button
+                    onClick={handleAnalyze}
+                    disabled={isAnalyzing}
+                    className="px-4 py-1.5 rounded-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold text-xs hover:scale-105 transition-all shadow-lg"
+                  >
+                    {isAnalyzing ? 'Analyzing...' : 'Analyze Code'}
+                  </button>
+                </div>
+                <div className="flex-1 min-h-0 relative">
+                  <Editor
+                    height="100%"
+                    language={language === 'cpp' ? 'cpp' : language}
+                    value={code}
+                    onChange={(val) => setCode(val || '')}
+                    theme="vs-dark"
+                    options={{
+                      fontSize: editorFontSize + 2,
+                      fontFamily: 'JetBrains Mono, Fira Code, monospace',
+                      minimap: { enabled: true },
+                      scrollBeyondLastLine: false,
+                      lineNumbers: 'on',
+                      roundedSelection: true,
+                      padding: { top: 12, bottom: 12 },
+                      tabSize: 2,
+                      automaticLayout: true,
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {fullscreenModule === 'chatgpt' && (
+              <ChatGPTExplainerView
+                code={code}
+                language={language}
+                theme={theme}
+                onLoadCodeToStudio={(newCode, newLang) => {
+                  if (newCode) setCode(newCode);
+                  if (newLang) setLanguage(newLang as ProgrammingLanguage);
+                  setFullscreenModule(null);
+                }}
+              />
+            )}
+
+            {fullscreenModule === 'pythontutor' && (
+              <PythonTutorViewer code={code} language={language} theme={theme} />
+            )}
+
+            {fullscreenModule === 'xray' && analysisData && (
+              <div className="space-y-4 font-mono">
+                <div className="p-4 rounded-xl bg-slate-900 border border-indigo-500/20 space-y-2">
+                  <h4 className="font-bold text-indigo-400 text-sm">Code Summary</h4>
+                  <p className="text-slate-300 text-xs leading-relaxed">{analysisData.summary}</p>
+                </div>
+                <LineByLineTable explanations={analysisData.lineByLine} theme={theme} />
+              </div>
+            )}
+
+            {fullscreenModule === 'dryrun' && (
+              <DryRunPlayer
+                dryRunData={dryRunData}
+                onStepChange={(line) => setHighlightLineNumber(line)}
+                theme={theme}
+              />
+            )}
+
+            {fullscreenModule === 'complexity' && (
+              <ComplexityChart
+                timeComplexity={analysisData?.timeComplexity || 'O(N)'}
+                spaceComplexity={analysisData?.spaceComplexity || 'O(1)'}
+                reasoning={analysisData?.complexityReasoning || ''}
+                optimizations={analysisData?.optimizations || []}
+                theme={theme}
+              />
+            )}
+
+            {fullscreenModule === 'quiz' && (
+              <QuizView quizData={quizData} theme={theme} />
+            )}
+
+            {fullscreenModule === 'interview' && (
+              <InterviewView interviewData={interviewData} theme={theme} />
+            )}
+
+            {fullscreenModule === 'notes' && (
+              <NotesView
+                notesData={notesData}
+                dryRunData={dryRunData}
+                analysisData={analysisData}
+                chatgptExplanation={chatgptExplanation}
+                code={code}
+                language={language}
+                theme={theme}
+                onBackToStudio={() => setFullscreenModule(null)}
+              />
+            )}
+
+            {fullscreenModule === 'history' && (
+              <CodeHistoryView
+                onLoadCode={(loadedCode, loadedLang) => {
+                  if (loadedLang) setLanguage(loadedLang as ProgrammingLanguage);
+                  setCode(loadedCode);
+                  setFullscreenModule(null);
+                }}
+                onExplainWithChatGPT={(loadedCode, loadedLang) => {
+                  if (loadedLang) setLanguage(loadedLang as ProgrammingLanguage);
+                  setCode(loadedCode);
+                  setFullscreenModule('chatgpt');
+                }}
+                theme={theme}
+              />
+            )}
+          </div>
+        </motion.div>
+      )}
 
       {/* FULL-SCREEN FOCUS MODE OVERLAY */}
       {isFocusMode && (

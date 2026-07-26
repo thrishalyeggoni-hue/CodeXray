@@ -467,50 +467,72 @@ Break down the response logically:
                 <div className={`chatgpt-markdown ${isLight ? 'chatgpt-markdown-light' : ''}`}>
                   <Markdown
                     components={{
+                      p({ children }: any) {
+                        return <div className="mb-2 leading-relaxed">{children}</div>;
+                      },
                       pre({ children }: any) {
-                        return <>{children}</>;
+                        return <div className="my-2">{children}</div>;
                       },
                       code({ node, inline, className, children, ...props }: any) {
                         const match = /language-(\w+)/.exec(className || '');
                         const codeStr = String(children).replace(/\n$/, '');
-                        if (!inline && codeStr) {
+                        const lines = codeStr.split('\n');
+                        const isMultiLine = lines.length > 1;
+
+                        // Single-line / short snippets without language tag render cleanly inline
+                        if (inline || (!isMultiLine && !match)) {
                           return (
-                            <div className="my-3 rounded-xl border border-slate-800 bg-slate-950 overflow-hidden shadow-md">
-                              <div className="px-3 py-1.5 bg-slate-900 border-b border-slate-800 flex items-center justify-between text-xs font-mono text-slate-400">
-                                <span>{match ? match[1].toUpperCase() : 'CODE'}</span>
-                                <div className="flex items-center space-x-2">
-                                  {onLoadCodeToStudio && (
-                                    <button
-                                      onClick={() => onLoadCodeToStudio(codeStr, match ? match[1] : language)}
-                                      className="flex items-center space-x-1 px-2 py-0.5 rounded bg-indigo-600/30 text-indigo-300 hover:bg-indigo-600 hover:text-white transition-all text-[11px] font-bold cursor-pointer"
-                                      title="Load this code block directly into the CodeXRay editor"
-                                    >
-                                      <ArrowUpRight className="w-3 h-3" />
-                                      <span>Load in Studio Editor</span>
-                                    </button>
-                                  )}
-                                  <button
-                                    onClick={() => handleCopyChunk(codeStr)}
-                                    className="flex items-center space-x-1 text-slate-400 hover:text-white transition-all text-[11px] cursor-pointer"
-                                  >
-                                    {copiedChunk === codeStr ? (
-                                      <span className="text-emerald-400 font-bold">Copied!</span>
-                                    ) : (
-                                      <span>Copy</span>
-                                    )}
-                                  </button>
-                                </div>
-                              </div>
-                              <pre className="p-3 text-xs font-mono text-cyan-300 overflow-x-auto leading-relaxed">
-                                <code>{codeStr}</code>
-                              </pre>
-                            </div>
+                            <code
+                              className={`px-1.5 py-0.5 rounded font-mono text-[12px] ${
+                                isLight
+                                  ? 'bg-slate-200/90 text-indigo-800 font-semibold border border-slate-300'
+                                  : 'bg-slate-800/90 text-cyan-300 border border-slate-700'
+                              } ${className || ''}`}
+                              {...props}
+                            >
+                              {children}
+                            </code>
                           );
                         }
+
+                        // Code block for multiline code or explicitly language-tagged code
                         return (
-                          <code className={className} {...props}>
-                            {children}
-                          </code>
+                          <div className={`my-2 rounded-lg border font-mono relative overflow-hidden shadow-xs ${
+                            isLight
+                              ? 'bg-slate-900 border-slate-700 text-slate-100'
+                              : 'bg-[#090d16] border-slate-800 text-slate-100'
+                          }`}>
+                            <div className="px-3 py-1 bg-slate-800/80 border-b border-slate-700/60 flex items-center justify-between text-[11px] font-mono text-slate-300">
+                              <span className="font-bold text-cyan-400 text-[10px] uppercase tracking-wider">
+                                {match ? match[1].toUpperCase() : 'CODE'}
+                              </span>
+                              <div className="flex items-center space-x-2">
+                                {onLoadCodeToStudio && (
+                                  <button
+                                    onClick={() => onLoadCodeToStudio(codeStr, match ? match[1] : language)}
+                                    className="flex items-center space-x-1 px-1.5 py-0.5 rounded bg-indigo-600/40 text-indigo-200 hover:bg-indigo-600 hover:text-white transition-all text-[10px] font-bold cursor-pointer"
+                                    title="Load this code block into the CodeXRay editor"
+                                  >
+                                    <ArrowUpRight className="w-3 h-3" />
+                                    <span>Load in Studio</span>
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => handleCopyChunk(codeStr)}
+                                  className="flex items-center space-x-1 text-slate-400 hover:text-white transition-all text-[10px] cursor-pointer"
+                                >
+                                  {copiedChunk === codeStr ? (
+                                    <span className="text-emerald-400 font-bold">Copied!</span>
+                                  ) : (
+                                    <span>Copy</span>
+                                  )}
+                                </button>
+                              </div>
+                            </div>
+                            <div className="p-2.5 text-xs font-mono text-cyan-200 overflow-x-auto leading-relaxed bg-[#090d16]">
+                              <code>{codeStr}</code>
+                            </div>
+                          </div>
                         );
                       },
                     }}

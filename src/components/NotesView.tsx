@@ -727,7 +727,7 @@ ${notesData.cheatSheetSummary}
           }`}>
             {chatgptExplanation ? (
               <div className={`chatgpt-markdown ${isLight ? 'chatgpt-markdown-light' : ''} text-xs sm:text-sm space-y-2 font-sans`}>
-                <Markdown>{sanitizeLaTeX(chatgptExplanation)}</Markdown>
+                <Markdown components={{ p({ children }: any) { return <div className="mb-2 leading-relaxed">{children}</div>; } }}>{sanitizeLaTeX(chatgptExplanation)}</Markdown>
               </div>
             ) : notesData.cheatSheetSummary ? (
               <div className="space-y-2 text-xs font-sans">
@@ -735,7 +735,7 @@ ${notesData.cheatSheetSummary}
                   Key Algorithmic AI Takeaways:
                 </p>
                 <div className={`chatgpt-markdown ${isLight ? 'chatgpt-markdown-light' : ''} leading-relaxed`}>
-                  <Markdown>{sanitizeLaTeX(notesData.cheatSheetSummary)}</Markdown>
+                  <Markdown components={{ p({ children }: any) { return <div className="mb-2 leading-relaxed">{children}</div>; } }}>{sanitizeLaTeX(notesData.cheatSheetSummary)}</Markdown>
                 </div>
               </div>
             ) : (
@@ -1079,7 +1079,7 @@ ${notesData.cheatSheetSummary}
                   <span>2. ChatGPT AI Code Explanation & Logic Breakdown</span>
                 </h3>
                 <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 chatgpt-markdown chatgpt-markdown-light text-xs font-sans">
-                  <Markdown>{sanitizeLaTeX(chatgptExplanation || notesData.cheatSheetSummary || notesData.summary || '')}</Markdown>
+                  <Markdown components={{ p({ children }: any) { return <div className="mb-2 leading-relaxed">{children}</div>; } }}>{sanitizeLaTeX(chatgptExplanation || notesData.cheatSheetSummary || notesData.summary || '')}</Markdown>
                 </div>
               </div>
 

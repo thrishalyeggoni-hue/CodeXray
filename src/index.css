@@ -349,22 +349,23 @@ code, pre, kbd, samp {
 
 .chatgpt-markdown-light code:not(pre code),
 .light .chatgpt-markdown code:not(pre code) {
-  background-color: #f1f5f9 !important;
-  color: #0369a1 !important;
+  background-color: rgba(226, 232, 240, 0.8) !important;
+  color: #0284c7 !important;
   border: 1px solid #cbd5e1 !important;
   font-weight: 600 !important;
 }
 
 .chatgpt-markdown-light pre,
 .light .chatgpt-markdown pre {
-  background-color: #f8fafc !important;
-  color: #0f172a !important;
-  border: 1px solid #cbd5e1 !important;
+  background-color: #0f172a !important;
+  color: #38bdf8 !important;
+  border: 1px solid #334155 !important;
+  border-radius: 0.5rem;
 }
 
 .chatgpt-markdown-light pre code,
 .light .chatgpt-markdown pre code {
-  color: #0369a1 !important;
+  color: #38bdf8 !important;
 }
 
 .chatgpt-markdown-light th,
